@@ -157,6 +157,8 @@ The following variables of the dataset will be looked into:
 # Summary statistic tables
 
 In this section we will cover the summary of our cleaned dataset. We will explore basic statistical values from our data.
+
+
 ## Numeric Statistics
 
 ```{r}
@@ -177,6 +179,9 @@ data |>
             ) |> 
   knitr::kable(digits = 2)
 ```
+
+## Visualization
+
 
 ## Nominal Statistics
 ```{r}
@@ -214,12 +219,32 @@ kable(
 )
 ```
 
-# Data visualisations
 
-::: callout-caution
-### Instructions
-Visually explore your data. 
-:::
+## Visualization
+
+## Overall Statistics
+
+## Visualization
+
+# Bivariate Analyse
+
+### Pairs Plot (all numeric variables)
+
+### Preis vs. Anzahl Badezimmer
+
+### Preis vs. Anzahl Schlafzimmer
+
+### USA Map AVG Price (Karte)
+
+### USA Map AVG Size (Karte)
+
+### USA Map Extremfälle Price (Karte)
+
+### House Size vs Lot Size
+  
+### Multiple Regression mit price als Zielvariable, Prädiktoren bed, bath, house_size, acre_lot.
+
+### Anzahl aktiver Listings pro State
 
 # Summary
 

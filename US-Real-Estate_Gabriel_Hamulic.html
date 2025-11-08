@@ -4367,7 +4367,6 @@ window.onload = function() {
   <li><a href="#summary-statistic-tables" id="toc-summary-statistic-tables" class="nav-link" data-scroll-target="#summary-statistic-tables">Summary statistic tables</a>
   <ul class="collapse">
   <li><a href="#nominal-statistics" id="toc-nominal-statistics" class="nav-link" data-scroll-target="#nominal-statistics">Nominal Statistics</a></li>
-  <li><a href="#nominal-statistics-1" id="toc-nominal-statistics-1" class="nav-link" data-scroll-target="#nominal-statistics-1">Nominal Statistics</a></li>
   </ul></li>
   <li><a href="#data-visualisations" id="toc-data-visualisations" class="nav-link" data-scroll-target="#data-visualisations">Data visualisations</a></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
@@ -4743,45 +4742,37 @@ Instructions
 </div>
 <section id="nominal-statistics" class="level2">
 <h2 class="anchored" data-anchor-id="nominal-statistics">Nominal Statistics</h2>
-</section>
-<section id="nominal-statistics-1" class="level2">
-<h2 class="anchored" data-anchor-id="nominal-statistics-1">Nominal Statistics</h2>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>top_n_per_var <span class="ot">&lt;-</span> <span class="dv">10</span>  <span class="co"># adjustable</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>nominal_summary <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(is.factor), price) <span class="sc">%&gt;%</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">where</span>(is.factor),</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;Variable&quot;</span>,</span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;Category&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable, Category) <span class="sc">%&gt;%</span></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>(),</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">Percent =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> Count <span class="sc">/</span> <span class="fu">nrow</span>(data), <span class="dv">2</span>),</span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_Price =</span> <span class="fu">round</span>(<span class="fu">mean</span>(price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">0</span>),</span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable) <span class="sc">%&gt;%</span></span>
-<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(<span class="at">order_by =</span> Count, <span class="at">n =</span> top_n_per_var, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
-<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
-<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>  nominal_summary,</span>
-<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(</span>
-<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Top &quot;</span>, top_n_per_var,</span>
-<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot; categories per factor variable (counts, share %, and mean price)&quot;</span></span>
-<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">2</span>,</span>
-<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>)</span>
-<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>top_n_per_var <span class="ot">&lt;-</span> <span class="dv">10</span>  <span class="co"># adjustable</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>nominal_summary <span class="ot">&lt;-</span> data  <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>()  <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(is.factor), price)  <span class="sc">|&gt;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">where</span>(is.factor),</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;Variable&quot;</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;Category&quot;</span>)  <span class="sc">|&gt;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable, Category)  <span class="sc">|&gt;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>(),</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">Percent =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> Count <span class="sc">/</span> <span class="fu">nrow</span>(data), <span class="dv">2</span>),</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_Price =</span> <span class="fu">round</span>(<span class="fu">mean</span>(price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">0</span>),</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  )  <span class="sc">|&gt;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable)  <span class="sc">|&gt;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(<span class="at">order_by =</span> Count, <span class="at">n =</span> top_n_per_var, <span class="at">with_ties =</span> <span class="cn">FALSE</span>)  <span class="sc">|&gt;</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  nominal_summary,</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Top &quot;</span>, top_n_per_var,</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot; categories per factor variable (counts, share %, and mean price)&quot;</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>)</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
@@ -5778,59 +5769,54 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <span id="cb12-199"><a href="#cb12-199" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
 <span id="cb12-200"><a href="#cb12-200" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-201"><a href="#cb12-201" aria-hidden="true" tabindex="-1"></a><span class="fu">## Nominal Statistics</span></span>
-<span id="cb12-202"><a href="#cb12-202" aria-hidden="true" tabindex="-1"></a><span class="fu">## Nominal Statistics</span></span>
-<span id="cb12-205"><a href="#cb12-205" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb12-206"><a href="#cb12-206" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: &quot;Nominal Statistics&quot;</span></span>
-<span id="cb12-207"><a href="#cb12-207" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Top categories for factor variables with counts, proportions, and mean price&quot;</span></span>
-<span id="cb12-208"><a href="#cb12-208" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-fold: true</span></span>
-<span id="cb12-209"><a href="#cb12-209" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-210"><a href="#cb12-210" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb12-211"><a href="#cb12-211" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb12-212"><a href="#cb12-212" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
-<span id="cb12-213"><a href="#cb12-213" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
-<span id="cb12-214"><a href="#cb12-214" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-215"><a href="#cb12-215" aria-hidden="true" tabindex="-1"></a>top_n_per_var <span class="ot">&lt;-</span> <span class="dv">10</span>  <span class="co"># adjustable</span></span>
-<span id="cb12-216"><a href="#cb12-216" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-217"><a href="#cb12-217" aria-hidden="true" tabindex="-1"></a>nominal_summary <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
-<span id="cb12-218"><a href="#cb12-218" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
-<span id="cb12-219"><a href="#cb12-219" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(is.factor), price) <span class="sc">%&gt;%</span></span>
-<span id="cb12-220"><a href="#cb12-220" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">where</span>(is.factor),</span>
-<span id="cb12-221"><a href="#cb12-221" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;Variable&quot;</span>,</span>
-<span id="cb12-222"><a href="#cb12-222" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;Category&quot;</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb12-223"><a href="#cb12-223" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable, Category) <span class="sc">%&gt;%</span></span>
-<span id="cb12-224"><a href="#cb12-224" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb12-225"><a href="#cb12-225" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>(),</span>
-<span id="cb12-226"><a href="#cb12-226" aria-hidden="true" tabindex="-1"></a>    <span class="at">Percent =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> Count <span class="sc">/</span> <span class="fu">nrow</span>(data), <span class="dv">2</span>),</span>
-<span id="cb12-227"><a href="#cb12-227" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_Price =</span> <span class="fu">round</span>(<span class="fu">mean</span>(price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">0</span>),</span>
-<span id="cb12-228"><a href="#cb12-228" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span></span>
-<span id="cb12-229"><a href="#cb12-229" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
-<span id="cb12-230"><a href="#cb12-230" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable) <span class="sc">%&gt;%</span></span>
-<span id="cb12-231"><a href="#cb12-231" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(<span class="at">order_by =</span> Count, <span class="at">n =</span> top_n_per_var, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
-<span id="cb12-232"><a href="#cb12-232" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
-<span id="cb12-233"><a href="#cb12-233" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-234"><a href="#cb12-234" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
-<span id="cb12-235"><a href="#cb12-235" aria-hidden="true" tabindex="-1"></a>  nominal_summary,</span>
-<span id="cb12-236"><a href="#cb12-236" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(</span>
-<span id="cb12-237"><a href="#cb12-237" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Top &quot;</span>, top_n_per_var,</span>
-<span id="cb12-238"><a href="#cb12-238" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot; categories per factor variable (counts, share %, and mean price)&quot;</span></span>
-<span id="cb12-239"><a href="#cb12-239" aria-hidden="true" tabindex="-1"></a>  ),</span>
-<span id="cb12-240"><a href="#cb12-240" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">2</span>,</span>
-<span id="cb12-241"><a href="#cb12-241" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>)</span>
-<span id="cb12-242"><a href="#cb12-242" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-243"><a href="#cb12-243" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb12-244"><a href="#cb12-244" aria-hidden="true" tabindex="-1"></a><span class="fu"># Data visualisations</span></span>
+<span id="cb12-204"><a href="#cb12-204" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb12-205"><a href="#cb12-205" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: &quot;Nominal Statistics&quot;</span></span>
+<span id="cb12-206"><a href="#cb12-206" aria-hidden="true" tabindex="-1"></a><span class="co">#| tbl-cap: &quot;Top categories for factor variables with counts, proportions, and mean price&quot;</span></span>
+<span id="cb12-207"><a href="#cb12-207" aria-hidden="true" tabindex="-1"></a><span class="co">#| code-fold: true</span></span>
+<span id="cb12-208"><a href="#cb12-208" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-209"><a href="#cb12-209" aria-hidden="true" tabindex="-1"></a>top_n_per_var <span class="ot">&lt;-</span> <span class="dv">10</span>  <span class="co"># adjustable</span></span>
+<span id="cb12-210"><a href="#cb12-210" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-211"><a href="#cb12-211" aria-hidden="true" tabindex="-1"></a>nominal_summary <span class="ot">&lt;-</span> data  <span class="sc">|&gt;</span></span>
+<span id="cb12-212"><a href="#cb12-212" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>()  <span class="sc">|&gt;</span></span>
+<span id="cb12-213"><a href="#cb12-213" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">where</span>(is.factor), price)  <span class="sc">|&gt;</span></span>
+<span id="cb12-214"><a href="#cb12-214" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">where</span>(is.factor),</span>
+<span id="cb12-215"><a href="#cb12-215" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">&quot;Variable&quot;</span>,</span>
+<span id="cb12-216"><a href="#cb12-216" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">&quot;Category&quot;</span>)  <span class="sc">|&gt;</span></span>
+<span id="cb12-217"><a href="#cb12-217" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable, Category)  <span class="sc">|&gt;</span></span>
+<span id="cb12-218"><a href="#cb12-218" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb12-219"><a href="#cb12-219" aria-hidden="true" tabindex="-1"></a>    <span class="at">Count =</span> <span class="fu">n</span>(),</span>
+<span id="cb12-220"><a href="#cb12-220" aria-hidden="true" tabindex="-1"></a>    <span class="at">Percent =</span> <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> Count <span class="sc">/</span> <span class="fu">nrow</span>(data), <span class="dv">2</span>),</span>
+<span id="cb12-221"><a href="#cb12-221" aria-hidden="true" tabindex="-1"></a>    <span class="at">Mean_Price =</span> <span class="fu">round</span>(<span class="fu">mean</span>(price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="dv">0</span>),</span>
+<span id="cb12-222"><a href="#cb12-222" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span></span>
+<span id="cb12-223"><a href="#cb12-223" aria-hidden="true" tabindex="-1"></a>  )  <span class="sc">|&gt;</span></span>
+<span id="cb12-224"><a href="#cb12-224" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(Variable)  <span class="sc">|&gt;</span></span>
+<span id="cb12-225"><a href="#cb12-225" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(<span class="at">order_by =</span> Count, <span class="at">n =</span> top_n_per_var, <span class="at">with_ties =</span> <span class="cn">FALSE</span>)  <span class="sc">|&gt;</span></span>
+<span id="cb12-226"><a href="#cb12-226" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span>
+<span id="cb12-227"><a href="#cb12-227" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-228"><a href="#cb12-228" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
+<span id="cb12-229"><a href="#cb12-229" aria-hidden="true" tabindex="-1"></a>  nominal_summary,</span>
+<span id="cb12-230"><a href="#cb12-230" aria-hidden="true" tabindex="-1"></a>  <span class="at">caption =</span> <span class="fu">paste0</span>(</span>
+<span id="cb12-231"><a href="#cb12-231" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Top &quot;</span>, top_n_per_var,</span>
+<span id="cb12-232"><a href="#cb12-232" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot; categories per factor variable (counts, share %, and mean price)&quot;</span></span>
+<span id="cb12-233"><a href="#cb12-233" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb12-234"><a href="#cb12-234" aria-hidden="true" tabindex="-1"></a>  <span class="at">digits =</span> <span class="dv">2</span>,</span>
+<span id="cb12-235"><a href="#cb12-235" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">&quot;l&quot;</span>, <span class="st">&quot;l&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>, <span class="st">&quot;r&quot;</span>)</span>
+<span id="cb12-236"><a href="#cb12-236" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-237"><a href="#cb12-237" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-238"><a href="#cb12-238" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-239"><a href="#cb12-239" aria-hidden="true" tabindex="-1"></a><span class="fu"># Data visualisations</span></span>
+<span id="cb12-240"><a href="#cb12-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-241"><a href="#cb12-241" aria-hidden="true" tabindex="-1"></a>::: callout-caution</span>
+<span id="cb12-242"><a href="#cb12-242" aria-hidden="true" tabindex="-1"></a><span class="fu">### Instructions</span></span>
+<span id="cb12-243"><a href="#cb12-243" aria-hidden="true" tabindex="-1"></a>Visually explore your data. </span>
+<span id="cb12-244"><a href="#cb12-244" aria-hidden="true" tabindex="-1"></a>:::</span>
 <span id="cb12-245"><a href="#cb12-245" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-246"><a href="#cb12-246" aria-hidden="true" tabindex="-1"></a>::: callout-caution</span>
-<span id="cb12-247"><a href="#cb12-247" aria-hidden="true" tabindex="-1"></a><span class="fu">### Instructions</span></span>
-<span id="cb12-248"><a href="#cb12-248" aria-hidden="true" tabindex="-1"></a>Visually explore your data. </span>
-<span id="cb12-249"><a href="#cb12-249" aria-hidden="true" tabindex="-1"></a>:::</span>
-<span id="cb12-250"><a href="#cb12-250" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-251"><a href="#cb12-251" aria-hidden="true" tabindex="-1"></a><span class="fu"># Summary</span></span>
-<span id="cb12-252"><a href="#cb12-252" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-253"><a href="#cb12-253" aria-hidden="true" tabindex="-1"></a>::: callout-caution</span>
-<span id="cb12-254"><a href="#cb12-254" aria-hidden="true" tabindex="-1"></a><span class="fu">### Instructions</span></span>
-<span id="cb12-255"><a href="#cb12-255" aria-hidden="true" tabindex="-1"></a>Summarise your finding. </span>
-<span id="cb12-256"><a href="#cb12-256" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb12-246"><a href="#cb12-246" aria-hidden="true" tabindex="-1"></a><span class="fu"># Summary</span></span>
+<span id="cb12-247"><a href="#cb12-247" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-248"><a href="#cb12-248" aria-hidden="true" tabindex="-1"></a>::: callout-caution</span>
+<span id="cb12-249"><a href="#cb12-249" aria-hidden="true" tabindex="-1"></a><span class="fu">### Instructions</span></span>
+<span id="cb12-250"><a href="#cb12-250" aria-hidden="true" tabindex="-1"></a>Summarise your finding. </span>
+<span id="cb12-251"><a href="#cb12-251" aria-hidden="true" tabindex="-1"></a>:::</span>
 </code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->
