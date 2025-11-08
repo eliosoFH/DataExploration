@@ -178,6 +178,42 @@ data |>
   knitr::kable(digits = 2)
 ```
 
+## Nominal Statistics
+```{r}
+#| label: "Nominal Statistics"
+#| tbl-cap: "Top categories for factor variables with counts, proportions, and mean price"
+#| code-fold: true
+
+top_n_per_var <- 10  # adjustable
+
+nominal_summary <- data  |>
+  janitor::clean_names()  |>
+  select(where(is.factor), price)  |>
+  pivot_longer(cols = where(is.factor),
+               names_to = "Variable",
+               values_to = "Category")  |>
+  group_by(Variable, Category)  |>
+  summarise(
+    Count = n(),
+    Percent = round(100 * Count / nrow(data), 2),
+    Mean_Price = round(mean(price, na.rm = TRUE), 0),
+    .groups = "drop"
+  )  |>
+  group_by(Variable)  |>
+  slice_max(order_by = Count, n = top_n_per_var, with_ties = FALSE)  |>
+  ungroup()
+
+kable(
+  nominal_summary,
+  caption = paste0(
+    "Top ", top_n_per_var,
+    " categories per factor variable (counts, share %, and mean price)"
+  ),
+  digits = 2,
+  align = c("l", "l", "r", "r", "r")
+)
+```
+
 # Data visualisations
 
 ::: callout-caution
