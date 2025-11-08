@@ -127,6 +127,9 @@ The dataset now has `r nrow(data)` observations and `r ncol(data)` variables aft
 ```{r} 
 data = data |>
   mutate(price_per_sqm = price/house_size)
+# Filter min and max values
+data = data |>
+  filter(price > 10000 & price < 1000000000)
 ```
 
 ### Cleaned Dataset
@@ -134,6 +137,9 @@ data = data |>
 paged_table(data)
 ```
 
+```{r}
+str(data)
+```
 
 We chose the following data types for our variables:
 
@@ -234,11 +240,116 @@ kable(
 
 ### Preis vs. Anzahl Schlafzimmer
 
-### USA Map AVG Price (Karte)
+### Preperation for Maps
+```{r}
+#| label: "state_mapping"
+#| code-fold: true
+
+library(dplyr)
+library(tibble)
+
+valid_states <- tibble(
+  state_name = c(state.name, "District of Columbia"),
+  state_abbr = c(state.abb,  "DC")
+)
+```
+
+### USA Map – Average Price
+```{r}
+```{r}
+#| label: "map_avg_price"
+#| tbl-cap: "Average property price by U.S. state"
+#| code-fold: true
+
+library(dplyr)
+library(plotly)
+
+map_price <- data |>
+  group_by(state) %>%
+  summarise(avg_price = mean(price, na.rm = TRUE), .groups = "drop") |>
+  inner_join(valid_states, by = c("state" = "state_name")) |>
+  mutate(avg_price_k = avg_price / 1000)
+
+plot_ly(
+  map_price,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~avg_price_k,
+  text = ~paste0(state, "<br>Avg Price: $", round(avg_price_k, 1), "K"),
+  colorscale = "Blues",
+  colorbar = list(title = "Avg Price ($K)")
+) |>
+  plotly::layout(
+    title = list(text = "Average Property Price by U.S. State"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+
+```
 
 ### USA Map AVG Size (Karte)
 
+```{r}
+#| label: "map_avg_size"
+#| tbl-cap: "Average house size by U.S. state"
+#| code-fold: true
+
+map_size <- data %>%
+  group_by(state) %>%
+  summarise(avg_size = mean(house_size, na.rm = TRUE), .groups = "drop") %>%
+  inner_join(valid_states, by = c("state" = "state_name"))
+
+plot_ly(
+  map_size,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~avg_size,
+  text = ~paste0(state, "<br>Avg Size: ", round(avg_size), " sqft"),
+  colorscale = "Greens",
+  colorbar = list(title = "Avg Size (sqft)")
+) %>%
+  plotly::layout(
+    title = list(text = "Average House Size by U.S. State"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+```
+
 ### USA Map Extremfälle Price (Karte)
+```{r}
+#| label: "map_extreme_price"
+#| tbl-cap: "Price range (max − min) by U.S. state"
+#| code-fold: true
+
+map_extremes <- data %>%
+  group_by(state) %>%
+  summarise(
+    min_price = suppressWarnings(min(price, na.rm = TRUE)),
+    max_price = suppressWarnings(max(price, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  mutate(range_price = max_price - min_price) %>%
+  inner_join(valid_states, by = c("state" = "state_name"))
+
+plot_ly(
+  map_extremes,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~range_price,
+  text = ~paste0(
+    state,
+    "<br>Min: $", formatC(min_price, big.mark = ",", format = "f", digits = 0),
+    "<br>Max: $", formatC(max_price, big.mark = ",", format = "f", digits = 0)
+  ),
+  colorscale = "Reds",
+  colorbar = list(title = "Price Range ($)")
+) %>%
+  plotly::layout(
+    title = list(text = "Price Extrem Values by U.S. State (Max − Min)"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+```
 
 ### House Size vs Lot Size
   
