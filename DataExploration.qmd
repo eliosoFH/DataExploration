@@ -63,7 +63,9 @@ library <- function(...) {suppressPackageStartupMessages(base::library(...))}
 library(tidyverse)
 library(dplyr)
 library(knitr)
+library(tidyr)
 library(rmarkdown)
+library(janitor)
 ```
 
 # Data 
@@ -154,21 +156,14 @@ The following variables of the dataset will be looked into:
 
 # Summary statistic tables
 
-::: callout-caution
-### Instructions
-Make summary statistics of your data.
-
-::: {.panel-tabset}
-
-## Numeric iris
-
-@tbl-summary-num-tidyverse-iris shows for the numerical variables in the iris dataset some summary statistics.
+In this section we will cover the summary of our cleaned dataset. We will explore basic statistical values from our data.
+## Numeric Statistics
 
 ```{r}
-#| label: "tbl-summary-num-tidyverse-iris"
-#| tbl-cap: "Summary statistics of numerical variables in `datasets::iris` with tidyverse (ungrouped)"
+#| label: "Numeric Statistics"
+#| tbl-cap: "Summary statistics of numerical variables in dataframe"
 #| code-fold: true
-iris |> 
+data |> 
   janitor::clean_names() |>
   mutate(row = row_number() |> factor()) |> 
   pivot_longer(cols = where(is.numeric)) |> 
@@ -182,151 +177,6 @@ iris |>
             ) |> 
   knitr::kable(digits = 2)
 ```
-
-
-
-## Numeric iris grouped
-
-@tbl-summary-num-tidyverse-iris-Species shows for the numerical variables in the iris dataset grouped summary statistics for different Species.
-
-```{r}
-#| label: "tbl-summary-num-tidyverse-iris-Species"
-#| tbl-cap: "Summary statistics of numerical variables in `datasets::iris` with tidyverse grouped by Species"
-#| code-fold: true
-iris |> 
-  janitor::clean_names() |>
-  mutate(row = row_number() |> as.character()) |> 
-  pivot_longer(cols = where(is.numeric)) |> 
-  group_by(name, species) |> 
-  summarize(N = n(),
-            min = min(value),
-            mean = mean(value),
-            median = median(value),
-            max = max(value),
-            st.dev = sd(value)
-            ) |> 
-  knitr::kable(digits = 2)
-```
-
-## Nominal iris
-
-@tbl-summary-fct-tidyverse-iris shows summary statistics for the iris factor variables.
-
-```{r}
-#| label: "tbl-summary-fct-tidyverse-iris"
-#| tbl-cap: "Summary statistics of factor variables in `datasets::iris` with tidyverse."
-#| code-fold: true
-
-iris |> 
-  janitor::clean_names() |>
-  mutate(row = row_number() |> as.character()) |> 
-  select(where(is.factor)) |> 
-  pivot_longer(cols = where(is.factor)) |> 
-  group_by(name) |> 
-  count(value) |> 
-  ungroup() |> 
-  arrange(desc(name), n) |> 
-  knitr::kable(digits = 2)
-```
-
-## Nominal penguins
-
-@tbl-summary-fct-tidyverse-penguins shows summary statistics for the iris factor variables.s and penguins factor variables.
-
-```{r}
-#| label: "tbl-summary-fct-tidyverse-penguins"
-#| tbl-cap: "Summary statistics of factor variables in `palmerpenguins::penguins` with tidyverse."
-#| code-fold: true
-
-data("penguins", package="palmerpenguins")
-penguins |> 
-  janitor::clean_names() |>
-  mutate(row = row_number() |> as.character()) |> 
-  select(where(is.factor)) |> 
-  pivot_longer(cols = where(is.factor)) |> 
-  group_by(name) |> 
-  count(value) |> 
-  ungroup() |> 
-  arrange(desc(name), n) |> #dput()
-  knitr::kable(digits = 2)
-```
-
-## All variable statistics
-
-@tbl-Base-R-All-Variables shows summary statistics applicable to different data type.
-
-```{r}
-#| code-fold: true
-#| code-summary: Load and specify dataset
-# specify full dataset
-data_all <- iris
-data_all <- palmerpenguins::penguins
-
-## numerical data
-data_num <- data_all[sapply(data_all, is.numeric)]
-data_num <- subset(data_all, select = sapply(data_all,is.numeric))
-data_num <- data_all |> select(where(is.numeric))
-
-## nominal data
-data_nom <- data_all[!sapply(data_all, is.numeric)]
-data_chr <- data_all[sapply(data_all, is.character)]
-data_lgl <- data_all[sapply(data_all, is.logical)]
-data_fct <- data_all[sapply(data_all, is.factor)]
-```
-
-
-```{r}
-#| label: tbl-Base-R-All-Variables
-#| tbl-cap: "Base R statistics applicable to all variables"
-#| code-fold: true
-data.frame(
-  #var = names(data_all),
-  n_obs = sapply(data_all, function(.) length(na.omit(.)))
-  ,n_all = sapply(na.omit(data_all), length)
-  ,n_missing = sapply(data_all, function(.) sum(is.na(.)))
-  ,mode = data_all |> sapply(mode)
-  ,class = data_all |> sapply(class)
-) |> #as_tibble() |> 
-  knitr::kable()
-```
-
-
-## Numerical data
-
-```{r}
-#| code-fold: true
-library(tidyverse)
-## n_obs individual by variables
-## n_all all variables have same n observations
-
-library(tidyverse)
-data.frame(
-  var = names(data_num),
-  n_obs = sapply(data_num, function(.) length(na.omit(.)))
-  ,n_all = sapply(na.omit(data_num), length)
-  ,min = sapply(data_num, function(.) min(na.omit(.)))
-  ,min_all = sapply(na.omit(data_num), min)
-  ,mean = sapply(data_num, function(.) mean(na.omit(.)))
-  ,mean_all = sapply(na.omit(data_num), mean)
-  ,median = sapply(data_num, function(.) median(na.omit(.)))
-  ,median_all = sapply(na.omit(data_num), median)
-  ,max = sapply(data_num, function(.) max(na.omit(.)))
-  ,max_all = sapply(na.omit(data_num), max)
-  ,sd = sapply(data_num, function(.) sd(na.omit(.)))
-  ,sd_all = sapply(na.omit(data_num), sd)
-) |> 
-  as_tibble() |> 
-  select(!contains("_all")) |> 
-  knitr::kable(digits = 2)
-```
-
-
-## print
-```{r}
-rmarkdown::paged_table(iris)
-```
-:::
-:::
 
 # Data visualisations
 
