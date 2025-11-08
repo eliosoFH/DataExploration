@@ -1,12 +1,12 @@
 ---
 title: "Data Exploration Gabriel Hamulic"
-subtitle: "Dataset: Startup Investments (https://www.kaggle.com/datasets/justinas/startup-investments)"
+subtitle: "Dataset: US Real Estate Dataset"
 author: "Hamulic, Gabriel"
 date: today
 embed-resources: true
 format:
   html: 
-    output-file: start-up-investments_Gabriel_Hamulic.html
+    output-file: US-Real-Estate_Gabriel_Hamulic.html
     #output-ext: "html.html" 
     toc: true
     toc-location: right
@@ -18,7 +18,7 @@ format:
       dark: darkly
     #echo: fenced
   pdf: 
-    output-file: start-up-investments_Gabriel_Hamulic.pdf 
+    output-file: US-Real-Estate_Gabriel_Hamulic.pdf 
     toc: true
     number-sections: true
     code-link: true
@@ -35,23 +35,6 @@ execute:
 \listoftables
 \listoflistings
 ```
-
-
-::: callout-caution
-### Instructions
-* Use this template for your project report. 
-* In the YAML field `author:` insert your name.
-* In the YAML field `subtitle:` insert the name of your dataset a hyper-linked it to your data source.
-* In the YAML fields `output:` for HTML and PDF insert the correct name for the output files (`name-of-dataset`_`your-surname`_`your-first-name`) including correct extensions `.html` `.pdf`. 
-* Do not remove import YAML setting like: `embed-resources: true`
-* Remove all `callout-caution ### Instructions` Instructions before submission from your final report.
-* Render your report into HTML and PDF format.
-* Submit in Moodle the following three files:
-  1. Rendered HTML report
-  2. Rendered PDF report
-  3. dataset file
-
-:::
 
 ::: callout-caution
 ### Instructions
@@ -71,13 +54,6 @@ Your report must be of high quality, meaning that your report:
 
 # Introduction
 
-::: callout-caution
-### Instructions
-Write some text that introduces the reader to your report. Give a brief overview of what is shown in the sections of your report, like the data handling, descriptive statistics, data visualisations, etc.  
-
-:::
-
-
 ## Libraries
 
 ```{r}
@@ -85,23 +61,17 @@ Write some text that introduces the reader to your report. Give a brief overview
 #| code-fold: true
 library <- function(...) {suppressPackageStartupMessages(base::library(...))}
 library(tidyverse)
-```
-
-```{r}
-library(RKaggle)
-
-data = get_dataset("justinas/startup-investments")
-
-data
+library(dplyr)
+library(knitr)
+library(rmarkdown)
 ```
 
 # Data 
 
 ## Data source
-::: callout-caution
-### Instructions
-Show your data source and provide appropriate links to your data including data descriptive files if available. 
-:::
+
+In this data exploration we are looking at the US Real Estate market with use of a dataset from kaggle published by Ahmed Shahriar Sakib. It contains over 2.2 Million Real Estate listings broken down to State, Size, Price (among other factors). (Source: <https://www.kaggle.com/datasets/ahmedshahriarsakib/usa-real-estate-dataset/data>)
+
 
 ## Data import
 
@@ -109,14 +79,77 @@ Show your data source and provide appropriate links to your data including data 
 ### Instructions
 Download and import your dataset. Assign each variable appropriate/correct data types. Discuss/explain your choice for each variable (groups) in the main text.
 :::
+```{r setup, include=FALSE}
+options(dplyr.print_max = 10, dplyr.print_min = 10)
+```
+
+
+```{r} 
+# Import Data
+data = read.csv("data/realtor-data.zip.csv")
+```
+
+## Data Transformation
+
+```{r} 
+# Keep relevant Columns
+data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, house_size))
+```
+
+```{r}
+str_out <- capture.output(str(data))
+kable(data.frame(Output = str_out), col.names = "Structure Output")
+```
+
+```{r} 
+# Assign Data Types
+data$status = as.factor(data$status)
+data$city = as.factor(data$city)
+data$state = as.factor(data$state)
+```
+
+```{r}
+str_out <- capture.output(str(data))
+kable(data.frame(Output = str_out), col.names = "Structure Output")
+```
+
+```{r}
+before_rows <- nrow(data)
+data <- na.omit(data)
+after_rows <- nrow(data)
+kable(data.frame(Description = c("Before NA removal", "After NA removal"),
+Rows = c(before_rows, after_rows)))
+```
+The dataset now has `r nrow(data)` observations and `r ncol(data)` variables after removing rows with missing values.
+
+```{r} 
+data = data |>
+  mutate(price_per_sqm = price/house_size)
+```
+
+### Cleaned Dataset
+```{r}
+paged_table(data)
+```
+
+
+We chose the following data types for our variables:
+
+- 
 
 ## Data dictionary
 
-::: callout-caution
-### Instructions
-Make a data dictionary (table) that describes all variables in the dataset (shows what they mean/measure).
-:::
+The following variables of the dataset will be looked into:
 
+- price - The price for which the item was listed on the market
+
+- status - The status if the house is already sold or still for sale
+
+- acre_lot - The size of the land / lot on which the house is located in acres
+
+- state - The state in which the house is located
+
+- house size - The size of the house in square feet
 
 
 # Summary statistic tables
