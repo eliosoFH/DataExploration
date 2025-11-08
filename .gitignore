@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+*.swp
+*.lock
+
+# Ordner
+/data/
+
+# Node / Python / VSCode (falls du damit arbeitest)
+node_modules/
+venv/
+__pycache__/
+.env
+.vscode/
+
+# Logs & temporäre Dateien
+*.log
+*.tmp
+*.bak
+*.old
+
+# System
+ehthumbs.db
+Thumbs.db

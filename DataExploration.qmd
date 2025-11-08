@@ -1,12 +1,12 @@
 ---
-title: "DataExplorationHamulicGabriel"
-subtitle: "Dataset: Startup Investments (https://www.kaggle.com/datasets/justinas/startup-investments?resource=download&select=objects.csv)"
+title: "Data Exploration Gabriel Hamulic"
+subtitle: "Dataset: Startup Investments (https://www.kaggle.com/datasets/justinas/startup-investments)"
 author: "Hamulic, Gabriel"
 date: today
 embed-resources: true
 format:
   html: 
-    output-file: start_up_investments.html
+    output-file: start-up-investments_Gabriel_Hamulic.html
     #output-ext: "html.html" 
     toc: true
     toc-location: right
@@ -18,7 +18,7 @@ format:
       dark: darkly
     #echo: fenced
   pdf: 
-    output-file: start_up_investments.pdf 
+    output-file: start-up-investments_Gabriel_Hamulic.pdf 
     toc: true
     number-sections: true
     code-link: true
