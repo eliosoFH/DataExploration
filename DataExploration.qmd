@@ -30,25 +30,23 @@ execute:
   warning: false
 ---
 
-```{=tex}
 \listoffigures 
 \listoftables
 \listoflistings
-```
 
 ::: callout-caution
 ### Instructions
-Your report must be of high quality, meaning that your report: 
 
-* is visually and textually pleasing of 
-* does not look/read/feel like a draft instead of a finished analysis
-+ explains/discusses your findings and results in the main text, e.g., explain/discuss all figures/table in the main text 
-* is representable such that it can show to any interested third party
-* uses figure/table captions/linking/reference (see example further down)
-* Do not show any standard printout of R-code, use for data.frame/tibbles `knitr::kable()` printing. 
-* Do not simply print datasets (too many lines) use instead `rmarkdown::paged_table()`
+Your report must be of high quality, meaning that your report:
+
+-   is visually and textually pleasing of
+-   does not look/read/feel like a draft instead of a finished analysis
+-   explains/discusses your findings and results in the main text, e.g., explain/discuss all figures/table in the main text
+-   is representable such that it can show to any interested third party
+-   uses figure/table captions/linking/reference (see example further down)
+-   Do not show any standard printout of R-code, use for data.frame/tibbles `knitr::kable()` printing.
+-   Do not simply print datasets (too many lines) use instead `rmarkdown::paged_table()`
 :::
-
 
 {{< pagebreak >}}
 
@@ -66,34 +64,37 @@ library(knitr)
 library(tidyr)
 library(rmarkdown)
 library(janitor)
+library(scales)
+library(tidytext)
+library(ggforce)
 ```
 
-# Data 
+# Data
 
 ## Data source
 
 In this data exploration we are looking at the US Real Estate market with use of a dataset from kaggle published by Ahmed Shahriar Sakib. It contains over 2.2 Million Real Estate listings broken down to State, Size, Price (among other factors). (Source: <https://www.kaggle.com/datasets/ahmedshahriarsakib/usa-real-estate-dataset/data>)
 
-
 ## Data import
 
 ::: callout-caution
 ### Instructions
+
 Download and import your dataset. Assign each variable appropriate/correct data types. Discuss/explain your choice for each variable (groups) in the main text.
 :::
+
 ```{r setup, include=FALSE}
 options(dplyr.print_max = 10, dplyr.print_min = 10)
 ```
 
-
-```{r} 
+```{r}
 # Import Data
 data = read.csv("data/realtor-data.zip.csv")
 ```
 
 ## Data Transformation
 
-```{r} 
+```{r}
 # Keep relevant Columns
 data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, house_size))
 ```
@@ -103,7 +104,7 @@ str_out <- capture.output(str(data))
 kable(data.frame(Output = str_out), col.names = "Structure Output")
 ```
 
-```{r} 
+```{r}
 # Assign Data Types
 data$status = as.factor(data$status)
 data$city = as.factor(data$city)
@@ -122,9 +123,10 @@ after_rows <- nrow(data)
 kable(data.frame(Description = c("Before NA removal", "After NA removal"),
 Rows = c(before_rows, after_rows)))
 ```
+
 The dataset now has `r nrow(data)` observations and `r ncol(data)` variables after removing rows with missing values.
 
-```{r} 
+```{r}
 data = data |>
   mutate(price_per_sqm = price/house_size)
 # Filter min and max values
@@ -133,6 +135,7 @@ data = data |>
 ```
 
 ### Cleaned Dataset
+
 ```{r}
 paged_table(data)
 ```
@@ -143,27 +146,25 @@ str(data)
 
 We chose the following data types for our variables:
 
-- 
+-   
 
 ## Data dictionary
 
 The following variables of the dataset will be looked into:
 
-- price - The price for which the item was listed on the market
+-   price - The price for which the item was listed on the market
 
-- status - The status if the house is already sold or still for sale
+-   status - The status if the house is already sold or still for sale
 
-- acre_lot - The size of the land / lot on which the house is located in acres
+-   acre_lot - The size of the land / lot on which the house is located in acres
 
-- state - The state in which the house is located
+-   state - The state in which the house is located
 
-- house size - The size of the house in square feet
-
+-   house size - The size of the house in square feet
 
 # Summary statistic tables
 
 In this section we will cover the summary of our cleaned dataset. We will explore basic statistical values from our data.
-
 
 ## Numeric Statistics
 
@@ -186,32 +187,53 @@ data |>
   knitr::kable(digits = 2)
 ```
 
-## Visualization
-
+```{r}
+#| label: "Logarithmic Visualisation"
+#| tbl-cap: "Visualisation of numerical variables in dataframe"
+#| code-fold: true
+data |>
+  clean_names() |>
+  pivot_longer(cols = where(is.numeric)) |>
+  ggplot(aes(x = value, fill = name)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "white") +
+  scale_x_log10(labels = label_comma()) +   # 👈 echte Werte, log-Skala
+  facet_wrap(~ name, scales = "free_x") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Numerical Variables (logarithmic scale)",
+    x = "Value",
+    y = "Count"
+  ) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 25, hjust = 1) 
+    )
+```
 
 ## Nominal Statistics
+
 ```{r}
 #| label: "Nominal Statistics"
 #| tbl-cap: "Top categories for factor variables with counts, proportions, and mean price"
 #| code-fold: true
 
-top_n_per_var <- 10  # adjustable
+top_n_per_var <- 10 
 
-nominal_summary <- data  |>
-  janitor::clean_names()  |>
-  select(where(is.factor), price)  |>
+nominal_summary <- data |>
+  clean_names() |>
+  select(where(is.factor), price) |>
   pivot_longer(cols = where(is.factor),
                names_to = "Variable",
-               values_to = "Category")  |>
-  group_by(Variable, Category)  |>
+               values_to = "Category") |>
+  group_by(Variable, Category) |>
   summarise(
     Count = n(),
     Percent = round(100 * Count / nrow(data), 2),
     Mean_Price = round(mean(price, na.rm = TRUE), 0),
     .groups = "drop"
-  )  |>
-  group_by(Variable)  |>
-  slice_max(order_by = Count, n = top_n_per_var, with_ties = FALSE)  |>
+  ) |>
+  group_by(Variable) |>
+  slice_max(order_by = Count, n = top_n_per_var, with_ties = FALSE) |>
   ungroup()
 
 kable(
@@ -225,8 +247,36 @@ kable(
 )
 ```
 
+```{r}
+#| label: "Visualization Nominal Statistics"
+#| tbl-cap: "Top categories for factor variables with counts, proportions, and mean price"
+#| code-fold: true
 
-## Visualization
+nominal_summary <- nominal_summary |>
+  group_by(Variable) |>
+  mutate(Category = forcats::fct_reorder(Category, Count),
+         Category = factor(Category, levels = unique(Category))) |>
+  ungroup()
+
+# 🔹 Plot: Facets untereinander, mit eigener x-Skala und y-Skala pro Variable
+ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
+  geom_col(show.legend = FALSE, alpha = 0.8, width = 0.7) +
+  facet_wrap(~ Variable, ncol = 1, scales = "free", drop = TRUE) +
+  scale_x_continuous(labels = label_comma()) +   # 👈 Tausendertrennung, keine 1e+05
+  theme_minimal() +
+  labs(
+    title = "Top Categories per Factor Variable",
+    x = "Count",
+    y = "Category"
+  ) +
+  theme(
+    panel.spacing.y = unit(1, "lines"),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 8),
+    plot.margin = margin(5, 15, 5, 5)
+  )
+```
+
 
 ## Overall Statistics
 
@@ -241,6 +291,7 @@ kable(
 ### Preis vs. Anzahl Schlafzimmer
 
 ### Preperation for Maps
+
 ```{r}
 #| label: "state_mapping"
 #| code-fold: true
@@ -255,7 +306,7 @@ valid_states <- tibble(
 ```
 
 ### USA Map – Average Price
-```{r}
+
 ```{r}
 #| label: "map_avg_price"
 #| tbl-cap: "Average property price by U.S. state"
@@ -316,6 +367,7 @@ plot_ly(
 ```
 
 ### USA Map Extremfälle Price (Karte)
+
 ```{r}
 #| label: "map_extreme_price"
 #| tbl-cap: "Price range (max − min) by U.S. state"
@@ -352,7 +404,7 @@ plot_ly(
 ```
 
 ### House Size vs Lot Size
-  
+
 ### Multiple Regression mit price als Zielvariable, Prädiktoren bed, bath, house_size, acre_lot.
 
 ### Anzahl aktiver Listings pro State
@@ -361,5 +413,6 @@ plot_ly(
 
 ::: callout-caution
 ### Instructions
-Summarise your finding. 
+
+Summarise your finding.
 :::
