@@ -98,9 +98,26 @@ data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, 
 
 ### Structure with standard datatypes
 ```{r}
+#| label: "data_structure"
+#| tbl-cap: "Structure of cleaned dataset"
 #| code-fold: true
-str_out <- capture.output(str(data))
-kable(data.frame(Output = str_out), col.names = "Structure Output")
+
+structure_tbl <- tibble::tibble(
+  Variable = names(data),
+  Type = sapply(data, function(x) class(x)[1]),
+  Example = sapply(data, function(x) {
+    val <- unique(x[!is.na(x)])[1]
+    if (is.factor(val)) 
+      as.character(val)
+  }),
+  Missing = sapply(data, function(x) sum(is.na(x)))
+)
+
+kable(
+  structure_tbl,
+  caption = "Structure summary of the dataset",
+  align = c("l", "l", "l", "r")
+)
 ```
 
 ```{r}
@@ -149,16 +166,47 @@ paged_table(data)
 ```
 
 ### Structure after transformation
+
 ```{r}
+#| label: "data_structure_after_transformation"
+#| tbl-cap: "Structure of cleaned dataset"
 #| code-fold: true
 
-str_out <- capture.output(str(data))
-kable(data.frame(Output = str_out), col.names = "Structure Output")
+structure_tbl <- tibble::tibble(
+  Variable = names(data),
+  Type = sapply(data, function(x) class(x)[1]),
+  Example = sapply(data, function(x) {
+    val <- unique(x[!is.na(x)])[1]
+    if (is.factor(val)) as.character(val) else as.character(round(val, 2))
+  }),
+  Missing = sapply(data, function(x) sum(is.na(x)))
+)
+
+kable(
+  structure_tbl,
+  caption = "Structure summary of the dataset",
+  align = c("l", "l", "l", "r")
+)
 ```
 
-We chose the following data types for our variables:
 
--   
+After cleaning the dataset, all variables have appropriate data types and no missing values (n = `r nrow(data)`):
+
+- status – Factor variable showing the listing status (e.g., for_sale, sold).
+
+- price – Numeric value for the property’s price in USD.
+
+- bed, bath – Integer counts of bedrooms and bathrooms.
+
+- acre_lot – Numeric size of the lot (in acres).
+
+- city, state – Factor variables identifying the property’s location.
+
+- house_size – Numeric size of the house (in square feet).
+
+- price_per_sqm – Numeric variable derived from price / house_size to compare prices across properties.
+
+All rows with missing data were removed, and categorical variables were converted to factors for easier analysis and visualization later on.
 
 ## Data dictionary
 
@@ -208,6 +256,18 @@ data |>
             ) |> 
   knitr::kable(digits = 2)
 ```
+
+#### Interpretation
+
+**price**: Very wide range (\$10.4k–\$51.5M). Mean (\$573k),  median (\$379k), indicating strong right-skew and high-priced outliers.
+
+**house_size**: Average ~2,119 sqft, median 1,812 sqft. Extremely large max (1,560,780 sqft) signals outliers. The distribution is right-skewed.
+
+**acre_lot**: Median 0.21 acres vs. mean 12.75 acres → a few very large parcels inflate the mean.
+
+**bed / bath**: Typical homes (~3 beds, 2 baths) with modest spread; minima at 1 suggest realistic counts.
+
+**price_per_sqm**: Mean \$262.42 vs. median \$197.42, also right-skewed, consistent with price outliers.
 
 ### Visualisation of numerical values
 
@@ -272,6 +332,15 @@ kable(
   align = c("l", "l", "r", "r", "r")
 )
 ```
+
+#### Interpretation
+**city**: Most listings in Houston, Tucson, Phoenix, and Los Angeles. Prices range widely — highest in Los Angeles (~\$1.9M), lowest around \$250k (Saint Louis).
+
+**state**: California, Texas, and Florida dominate listings (>30% total). California shows the highest mean price (~\$1.1M).
+
+**status**: 55% for sale, 45% sold. Active listings are priced higher (~\$621k vs. \$515k).
+
+**Overall**: Listings cluster in major U.S. cities and states, with strong regional price differences, especially high in California and large metro areas.
 
 ### Visualisation of nominal variables (top categories)
 
@@ -341,7 +410,7 @@ p +
   labs(title = "Scatterplot-Matrix (log-transformiert, n=3000)")
 ```
 
-### Price vs. house size by listing status
+### Price vs. House Size by Status
 
 ```{r}
 #| label: "scatter_price_size"
@@ -367,6 +436,17 @@ plot_ly(
     yaxis = list(title = "Price ($)", type = "log")
   )
 ```
+
+#### Interpretation 
+
+**Positive relationship**: Larger houses generally have **higher prices**, though the relationship weakens for very large properties.
+
+**Status comparison**: Both for_sale and sold homes follow **similar trends**, but **for_sale** listings appear higher in price, suggesting sellers may list above sale values.
+
+**High variation**: At similar sizes, prices vary widely — showing the strong influence of **location** and other factors.
+
+**Outliers**: A few extremely large or expensive properties stretch the scale upward.
+
 
 ### Multiple Regression
 
@@ -411,8 +491,7 @@ tidy(model, conf.int = TRUE) |>
   )
 ```
 
-
-### USA Map – Average Price
+### Average Property Price Map
 ```{r}
 #| label: "state_mapping"
 #| code-fold: true
@@ -451,7 +530,19 @@ plot_ly(
 
 ```
 
-### USA Map AVG Size (Karte)
+#### Interpretation 
+
+**Regional variation**: Western and coastal states show generally **higher property prices**, while central regions are lower.
+
+**Highest averages**: States like **California, New York, and Washington** stand out with mean prices well above **$1M**.
+
+**Moderate prices**: States such as Texas, Florida, and Arizona fall in the **mid-range** (~$400–650K).
+
+**Lower averages**: Midwest and Southern states have more affordable properties on average.
+
+**Summary**: Property values are heavily influenced by **geography** — with the highest prices concentrated along the coasts and major urban centers.
+
+### Average House Size Map
 
 ```{r}
 #| label: "map_avg_size"
@@ -479,21 +570,29 @@ plot_ly(
   )
 ```
 
-### USA Map Extremfälle Price (Karte)
+#### Interpretation 
+
+**General trend**: Average house sizes are fairly consistent across most states, typically around 2,000–2,500 sqft.
+
+**Larger homes**: Some central and mountain states (e.g., Colorado, Utah, Iowa) show slightly larger averages, possibly due to more available land.
+
+**Smaller homes**: Coastal and densely populated states (e.g., New York, California) tend to have smaller average house sizes.
+
+### Price Range by US State
 
 ```{r}
 #| label: "map_extreme_price"
 #| tbl-cap: "Price range (max − min) by U.S. state"
 #| code-fold: true
 
-map_extremes <- data %>%
-  group_by(state) %>%
+map_extremes <- data |>
+  group_by(state) |>
   summarise(
     min_price = suppressWarnings(min(price, na.rm = TRUE)),
     max_price = suppressWarnings(max(price, na.rm = TRUE)),
     .groups = "drop"
-  ) %>%
-  mutate(range_price = max_price - min_price) %>%
+  ) |>
+  mutate(range_price = max_price - min_price) |>
   inner_join(valid_states, by = c("state" = "state_name"))
 
 plot_ly(
@@ -509,17 +608,20 @@ plot_ly(
   ),
   colorscale = "Reds",
   colorbar = list(title = "Price Range ($)")
-) %>%
+) |>
   plotly::layout(
     title = list(text = "Price Extrem Values by U.S. State (Max − Min)"),
     geo = list(scope = "usa", projection = list(type = "albers usa"))
   )
 ```
 
+#### Interpretation 
+
+**Highest ranges**: California shows by far the **largest price range** (over $400M), driven by extremely high luxury property values.
+
+**Moderate ranges**: States like Florida and parts of the Northeast also show wide **price spreads**, reflecting diverse markets from affordable to luxury homes.
+
+**Lower ranges**: Most central and midwestern states have smaller price gaps, indicating more uniform housing markets.
+
 # Summary
 
-::: callout-caution
-### Instructions
-
-Summarise your finding.
-:::
