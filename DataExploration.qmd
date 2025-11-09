@@ -407,7 +407,7 @@ p +
     axis.title = element_text(size = 9),
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
   ) +
-  labs(title = "Scatterplot-Matrix (log-transformiert, n=3000)")
+  labs(title = "Pairs Plot (log-transformiert, n=3000)")
 ```
 
 ### Price vs. House Size by Status
