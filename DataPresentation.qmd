@@ -253,7 +253,7 @@ plot_ly(
   locations = ~state_abbr,
   z = ~avg_price_k,
   text = ~paste0(state, "<br>Avg Price: $", round(avg_price_k, 1), "K"),
-  colorscale = "Blues",
+  colorscale = list(c(0, 1), c("lightblue", "darkblue")),
   colorbar = list(title = "Avg Price ($K)")
 ) |>
   plotly::layout(
@@ -269,9 +269,9 @@ plot_ly(
 #| tbl-cap: "Average house size by U.S. state"
 #| code-fold: true
 
-map_size <- data |>
-  group_by(state) |>
-  summarise(avg_size = mean(house_size, na.rm = TRUE), .groups = "drop") |>
+map_size <- data %>%
+  group_by(state) %>%
+  summarise(avg_size = mean(house_size, na.rm = TRUE), .groups = "drop") %>%
   inner_join(valid_states, by = c("state" = "state_name"))
 
 plot_ly(
@@ -281,9 +281,9 @@ plot_ly(
   locations = ~state_abbr,
   z = ~avg_size,
   text = ~paste0(state, "<br>Avg Size: ", round(avg_size), " sqft"),
-  colorscale = "Greens",
+  colorscale = list(c(0, 1), c("lightgreen", "darkgreen")),
   colorbar = list(title = "Avg Size (sqft)")
-) |>
+) %>%
   plotly::layout(
     title = list(text = "Average House Size by U.S. State"),
     geo = list(scope = "usa", projection = list(type = "albers usa"))
