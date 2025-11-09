@@ -67,6 +67,7 @@ library(janitor)
 library(scales)
 library(tidytext)
 library(ggforce)
+library(GGally)
 ```
 
 # Data
@@ -277,14 +278,42 @@ ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
   )
 ```
 
-
-## Overall Statistics
-
-## Visualization
-
 # Bivariate Analyse
 
 ### Pairs Plot (all numeric variables)
+
+```{r}
+#| label: "Pairs Plot"
+#| code-fold: true
+
+set.seed(123)
+
+data_num <- data |>
+  janitor::clean_names() |>
+  select(where(is.numeric)) |>
+  slice_sample(n = 3000) |>
+  mutate(across(everything(), log1p))   # 👈 log(1+x) gegen Ausreißer
+
+p <- ggpairs(
+  data_num,
+  progress = FALSE,
+  upper = list(continuous = wrap("cor", size = 4, alignPercent = 0.8, stars = TRUE)),
+  lower = list(continuous = wrap("points", alpha = 0.3, size = 0.7)),
+  diag = list(continuous = wrap("densityDiag", alpha = 0.7))
+)
+
+p +
+  theme_minimal(base_size = 11) +
+  theme(
+    strip.text = element_text(size = 8, face = "bold"),
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 9),
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
+  ) +
+  labs(title = "Scatterplot-Matrix (log-transformiert, n=3000)")
+
+```
 
 ### Preis vs. Anzahl Badezimmer
 
