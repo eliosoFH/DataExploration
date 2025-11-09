@@ -69,6 +69,7 @@ library(tidytext)
 library(ggforce)
 library(GGally)
 library(DT)
+library(kableExtra)
 ```
 
 # Data
@@ -86,7 +87,7 @@ Download and import your dataset. Assign each variable appropriate/correct data 
 :::
 
 ```{r setup, include=FALSE}
-options(dplyr.print_max = 10, dplyr.print_min = 10)
+options(dplyr.print_max = 15, dplyr.print_min = 10)
 ```
 
 ```{r}
@@ -345,6 +346,35 @@ tidy(model) |>
     )
   )
 ```
+
+```{r}
+tidy(model) |>
+  arrange(p.value) |>
+  mutate(
+    estimate = round(estimate, 3),
+    std.error = round(std.error, 3),
+    statistic = round(statistic, 2),
+    p.value = signif(p.value, 3)
+  ) |>
+  datatable(
+    caption = htmltools::tags$caption(
+      style = "caption-side: top; text-align: left;",
+      "Regressionsergebnisse (interaktiv)"
+    ),
+    filter = "top",
+    options = list(
+      pageLength = 10,
+      scrollX = TRUE,
+      autoWidth = TRUE,
+      responsive = TRUE,
+      columnDefs = list(
+        list(width = '100px', targets = "_all")
+      )
+    ),
+    class = 'cell-border stripe hover nowrap'
+  )
+```
+
 
 ```{r}
 #| label: "Graphic Regression"
