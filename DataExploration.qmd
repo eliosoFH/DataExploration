@@ -52,6 +52,16 @@ Your report must be of high quality, meaning that your report:
 
 # Introduction
 
+In this project, we explore a large dataset of over 2 million real estate listings across the United States. The data includes key property attributes such as price, size, lot area, location, and listing status.
+
+Our goal is to gain a deeper understanding of the current U.S. housing market by identifying:
+
+- Patterns in property prices and sizes across states and cities
+
+- Relationships between housing characteristics (e.g., size, bedrooms, bathrooms)
+
+- Regional differences in affordability and market activity
+
 ## Libraries
 
 ```{r}
@@ -190,21 +200,21 @@ kable(
 ```
 
 
-After cleaning the dataset, all variables have appropriate data types and no missing values (n = `r nrow(data)`):
+After cleaning the dataset, all variables have appropriate data types and no missing values (**n = `r nrow(data)`**):
 
-- status – Factor variable showing the listing status (e.g., for_sale, sold).
+- **status** – Factor variable showing the listing status (e.g., for_sale, sold).
 
-- price – Numeric value for the property’s price in USD.
+- **price** – Numeric value for the property’s price in USD.
 
-- bed, bath – Integer counts of bedrooms and bathrooms.
+- **bed, bath** – Integer counts of bedrooms and bathrooms.
 
-- acre_lot – Numeric size of the lot (in acres).
+- **acre_lot** – Numeric size of the lot (in acres).
 
-- city, state – Factor variables identifying the property’s location.
+- **city, state** – Factor variables identifying the property’s location.
 
-- house_size – Numeric size of the house (in square feet).
+- **house_size** – Numeric size of the house (in square feet).
 
-- price_per_sqm – Numeric variable derived from price / house_size to compare prices across properties.
+- **price_per_sqm** – Numeric variable derived from price / house_size to compare prices across properties.
 
 All rows with missing data were removed, and categorical variables were converted to factors for easier analysis and visualization later on.
 
