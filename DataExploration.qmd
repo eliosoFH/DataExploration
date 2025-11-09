@@ -5,7 +5,7 @@ author: "Hamulic, Gabriel"
 date: today
 embed-resources: true
 format:
-  html: 
+  html:
     output-file: US-Real-Estate_Gabriel_Hamulic.html
     #output-ext: "html.html" 
     toc: true
@@ -68,6 +68,7 @@ library(scales)
 library(tidytext)
 library(ggforce)
 library(GGally)
+library(DT)
 ```
 
 # Data
@@ -151,17 +152,23 @@ We chose the following data types for our variables:
 
 ## Data dictionary
 
-The following variables of the dataset will be looked into:
+```{r}
+tibble(
+  Variable = c("price", "status", "acre_lot", "state", "house_size"),
+  Description = c(
+    "The price for which the item was listed on the market",
+    "The status if the house is already sold or still for sale",
+    "The size of the land / lot on which the house is located in acres",
+    "The state in which the house is located",
+    "The size of the house in square feet"
+  )
+) |>
+  kable(
+    caption = "Description of key variables in the dataset",
+    align = c("l", "l")
+  )
+```
 
--   price - The price for which the item was listed on the market
-
--   status - The status if the house is already sold or still for sale
-
--   acre_lot - The size of the land / lot on which the house is located in acres
-
--   state - The state in which the house is located
-
--   house size - The size of the house in square feet
 
 # Summary statistic tables
 
@@ -278,9 +285,9 @@ ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
   )
 ```
 
-# Bivariate Analyse
+# Bivariate Analysis
 
-### Pairs Plot (all numeric variables)
+### Scatterplot (all numeric variables)
 
 ```{r}
 #| label: "Pairs Plot"
@@ -292,7 +299,7 @@ data_num <- data |>
   janitor::clean_names() |>
   select(where(is.numeric)) |>
   slice_sample(n = 3000) |>
-  mutate(across(everything(), log1p))   # 👈 log(1+x) gegen Ausreißer
+  mutate(across(everything(), log1p)) 
 
 p <- ggpairs(
   data_num,
@@ -315,9 +322,47 @@ p +
 
 ```
 
-### Preis vs. Anzahl Badezimmer
+### Multiple Regression mit price als Zielvariable, Prädiktoren bed, bath, house_size, acre_lot.
 
-### Preis vs. Anzahl Schlafzimmer
+```{r}
+model <- lm(price ~ house_size + bath + bed + state + status, data = data)
+library(broom)
+tidy(model) |>
+  arrange(p.value) |>
+  mutate(
+    estimate = round(estimate, 3),
+    std.error = round(std.error, 3),
+    statistic = round(statistic, 2),
+    p.value = signif(p.value, 3)
+  ) |>
+  datatable(
+    caption = "Regressionsergebnisse (interaktiv)",
+    filter = "top",         
+    options = list(
+      pageLength = 10,      
+      autoWidth = TRUE,
+      responsive = TRUE
+    )
+  )
+```
+
+```{r}
+#| label: "Graphic Regression"
+#| code-fold: true
+#| 
+tidy(model, conf.int = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(term = reorder(term, estimate)) |>
+  ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
+  geom_col(show.legend = FALSE) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(
+    title = "Greatest contributors to price",
+    x = "regression coefficient",
+    y = ""
+  )
+```
 
 ### Preperation for Maps
 
@@ -433,8 +478,6 @@ plot_ly(
 ```
 
 ### House Size vs Lot Size
-
-### Multiple Regression mit price als Zielvariable, Prädiktoren bed, bath, house_size, acre_lot.
 
 ### Anzahl aktiver Listings pro State
 
