@@ -80,46 +80,39 @@ In this data exploration we are looking at the US Real Estate market with use of
 
 ## Data import
 
-::: callout-caution
-### Instructions
-
-Download and import your dataset. Assign each variable appropriate/correct data types. Discuss/explain your choice for each variable (groups) in the main text.
-:::
-
 ```{r setup, include=FALSE}
 options(dplyr.print_max = 15, dplyr.print_min = 10)
 ```
 
 ```{r}
-# Import Data
-data = read.csv("data/realtor-data.zip.csv")
+data = read.csv("data/realtor-data.zip.csv") # Data import
 ```
 
 ## Data Transformation
 
 ```{r}
-# Keep relevant Columns
-data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, house_size))
+data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, house_size)) # keep relevant columns
 ```
 
+### Structure with standard datatypes
 ```{r}
+#| code-fold: true
 str_out <- capture.output(str(data))
 kable(data.frame(Output = str_out), col.names = "Structure Output")
 ```
 
 ```{r}
+#| code-fold: true
+
 # Assign Data Types
 data$status = as.factor(data$status)
 data$city = as.factor(data$city)
 data$state = as.factor(data$state)
 ```
 
+### NA Removal
 ```{r}
-str_out <- capture.output(str(data))
-kable(data.frame(Output = str_out), col.names = "Structure Output")
-```
-
-```{r}
+#| code-fold: true
 before_rows <- nrow(data)
 data <- na.omit(data)
 after_rows <- nrow(data)
@@ -129,22 +122,36 @@ Rows = c(before_rows, after_rows)))
 
 The dataset now has `r nrow(data)` observations and `r ncol(data)` variables after removing rows with missing values.
 
+### Filtering
 ```{r}
-data = data |>
-  mutate(price_per_sqm = price/house_size)
+#| code-fold: true
+
 # Filter min and max values
 data = data |>
   filter(price > 10000 & price < 1000000000)
 ```
 
-### Cleaned Dataset
-
+### Calculations
 ```{r}
+#| code-fold: true
+
+data = data |>
+  mutate(price_per_sqm = price/house_size)
+```
+
+### Cleaned Dataset
+```{r}
+#| code-fold: true
+
 paged_table(data)
 ```
 
+### Structure after transformation
 ```{r}
-str(data)
+#| code-fold: true
+
+str_out <- capture.output(str(data))
+kable(data.frame(Output = str_out), col.names = "Structure Output")
 ```
 
 We chose the following data types for our variables:
@@ -154,6 +161,8 @@ We chose the following data types for our variables:
 ## Data dictionary
 
 ```{r}
+#| code-fold: true
+
 tibble(
   Variable = c("price", "status", "acre_lot", "state", "house_size"),
   Description = c(
@@ -177,6 +186,8 @@ In this section we will cover the summary of our cleaned dataset. We will explor
 
 ## Numeric Statistics
 
+### Summary of numerical values
+
 ```{r}
 #| label: "Numeric Statistics"
 #| tbl-cap: "Summary statistics of numerical variables in dataframe"
@@ -195,6 +206,8 @@ data |>
             ) |> 
   knitr::kable(digits = 2)
 ```
+
+### Visualisation of numerical values
 
 ```{r}
 #| label: "Logarithmic Visualisation"
@@ -220,6 +233,8 @@ data |>
 ```
 
 ## Nominal Statistics
+
+### Summary of nominal variables (top categories)
 
 ```{r}
 #| label: "Nominal Statistics"
@@ -256,6 +271,8 @@ kable(
 )
 ```
 
+### Visualisation of nominal variables (top categories)
+
 ```{r}
 #| label: "Visualization Nominal Statistics"
 #| tbl-cap: "Top categories for factor variables with counts, proportions, and mean price"
@@ -267,11 +284,11 @@ nominal_summary <- nominal_summary |>
          Category = factor(Category, levels = unique(Category))) |>
   ungroup()
 
-# 🔹 Plot: Facets untereinander, mit eigener x-Skala und y-Skala pro Variable
+# Plot: Facets untereinander, mit eigener x-Skala und y-Skala pro Variable
 ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
   geom_col(show.legend = FALSE, alpha = 0.8, width = 0.7) +
   facet_wrap(~ Variable, ncol = 1, scales = "free", drop = TRUE) +
-  scale_x_continuous(labels = label_comma()) +   # 👈 Tausendertrennung, keine 1e+05
+  scale_x_continuous(labels = label_comma()) +   #Tausendertrennung, keine 1e+05
   theme_minimal() +
   labs(
     title = "Top Categories per Factor Variable",
@@ -288,7 +305,7 @@ ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
 
 # Bivariate Analysis
 
-### Scatterplot (all numeric variables)
+### Pairs Plot (all numeric variables)
 
 ```{r}
 #| label: "Pairs Plot"
@@ -320,20 +337,51 @@ p +
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
   ) +
   labs(title = "Scatterplot-Matrix (log-transformiert, n=3000)")
-
 ```
 
-### Multiple Regression mit price als Zielvariable, Prädiktoren bed, bath, house_size, acre_lot.
+### Price vs. house size by listing status
 
 ```{r}
+#| label: "scatter_price_size"
+#| tbl-cap: "Price vs. house size by listing status"
+#| code-fold: true
+
+library(dplyr)
+library(plotly)
+
+# Stichprobe ziehen für Performance
+set.seed(123)
+sample_data <- data %>% sample_n(50000)
+
+plot_ly(
+  sample_data,
+  x = ~house_size,
+  y = ~price,
+  color = ~status,
+  type = "scatter",
+  mode = "markers",
+  alpha = 0.6
+) %>%
+  plotly::layout(
+    title = list(text = "Relationship Between House Size and Price by Status"),
+    xaxis = list(title = "House Size (sqft)"),
+    yaxis = list(title = "Price ($)", type = "log")
+  )
+```
+
+### Multiple Regression
+
+```{r}
+#| code-fold: true
+
 model <- lm(price ~ house_size + bath + bed + state + status, data = data)
 library(broom)
 tidy(model) |>
   arrange(p.value) |>
   mutate(
-    estimate = round(estimate, 3),
-    std.error = round(std.error, 3),
-    statistic = round(statistic, 2),
+    estimate = round(estimate, 1),
+    std.error = round(std.error, 1),
+    statistic = round(statistic, 1),
     p.value = signif(p.value, 3)
   ) |>
   datatable(
@@ -346,35 +394,6 @@ tidy(model) |>
     )
   )
 ```
-
-```{r}
-tidy(model) |>
-  arrange(p.value) |>
-  mutate(
-    estimate = round(estimate, 3),
-    std.error = round(std.error, 3),
-    statistic = round(statistic, 2),
-    p.value = signif(p.value, 3)
-  ) |>
-  datatable(
-    caption = htmltools::tags$caption(
-      style = "caption-side: top; text-align: left;",
-      "Regressionsergebnisse (interaktiv)"
-    ),
-    filter = "top",
-    options = list(
-      pageLength = 10,
-      scrollX = TRUE,
-      autoWidth = TRUE,
-      responsive = TRUE,
-      columnDefs = list(
-        list(width = '100px', targets = "_all")
-      )
-    ),
-    class = 'cell-border stripe hover nowrap'
-  )
-```
-
 
 ```{r}
 #| label: "Graphic Regression"
@@ -394,8 +413,8 @@ tidy(model, conf.int = TRUE) |>
   )
 ```
 
-### Preperation for Maps
 
+### USA Map – Average Price
 ```{r}
 #| label: "state_mapping"
 #| code-fold: true
@@ -408,8 +427,6 @@ valid_states <- tibble(
   state_abbr = c(state.abb,  "DC")
 )
 ```
-
-### USA Map – Average Price
 
 ```{r}
 #| label: "map_avg_price"
@@ -507,9 +524,10 @@ plot_ly(
   )
 ```
 
-### House Size vs Lot Size
+
 
 ### Anzahl aktiver Listings pro State
+
 
 # Summary
 
