@@ -524,11 +524,6 @@ plot_ly(
   )
 ```
 
-
-
-### Anzahl aktiver Listings pro State
-
-
 # Summary
 
 ::: callout-caution
