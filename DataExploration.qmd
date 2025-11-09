@@ -70,6 +70,8 @@ library(ggforce)
 library(GGally)
 library(DT)
 library(kableExtra)
+library(broom)
+library(plotly)
 ```
 
 # Data
@@ -346,9 +348,6 @@ p +
 #| tbl-cap: "Price vs. house size by listing status"
 #| code-fold: true
 
-library(dplyr)
-library(plotly)
-
 # Stichprobe ziehen für Performance
 set.seed(123)
 sample_data <- data %>% sample_n(50000)
@@ -375,7 +374,6 @@ plot_ly(
 #| code-fold: true
 
 model <- lm(price ~ house_size + bath + bed + state + status, data = data)
-library(broom)
 tidy(model) |>
   arrange(p.value) |>
   mutate(
@@ -398,7 +396,7 @@ tidy(model) |>
 ```{r}
 #| label: "Graphic Regression"
 #| code-fold: true
-#| 
+ 
 tidy(model, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(term = reorder(term, estimate)) |>
@@ -419,9 +417,6 @@ tidy(model, conf.int = TRUE) |>
 #| label: "state_mapping"
 #| code-fold: true
 
-library(dplyr)
-library(tibble)
-
 valid_states <- tibble(
   state_name = c(state.name, "District of Columbia"),
   state_abbr = c(state.abb,  "DC")
@@ -432,9 +427,6 @@ valid_states <- tibble(
 #| label: "map_avg_price"
 #| tbl-cap: "Average property price by U.S. state"
 #| code-fold: true
-
-library(dplyr)
-library(plotly)
 
 map_price <- data |>
   group_by(state) %>%
