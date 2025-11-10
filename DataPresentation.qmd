@@ -48,6 +48,12 @@ data = data |>
 ```
 
 ## Basics
+- Dataset of 2.2M+ real estate listings across the United States (source: Kaggle, Ahmed Shahriar Sakib).
+- Includes key features: price, size, lot area, bedrooms, bathrooms, location, and status.
+- Goals:
+  - Understand price patterns and housing characteristics across states.
+  - Analyze relationships between property features and regional affordability trends.
+  - Provide insights into the current U.S. housing market dynamics.
 
 ## Data structure
 ```{r}
@@ -325,3 +331,5 @@ plot_ly(
     geo = list(scope = "usa", projection = list(type = "albers usa"))
   )
 ```
+
+## Thank you for your attention
