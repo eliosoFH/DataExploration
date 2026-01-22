@@ -632,8 +632,8 @@ test_data <- data[-train_indices, ]
 ```{r}
 #| code-fold: true
 
-model <- lm(price ~ house_size + bath + bed + state + status, data = train_data)
-tidy(model) |>
+model_lr <- lm(price ~ house_size + bath + bed + state + status, data = train_data)
+tidy(model_lr) |>
   arrange(p.value) |>
   mutate(
     estimate = round(estimate, 1),
@@ -656,7 +656,7 @@ tidy(model) |>
 #| label: "Graphic Regression"
 #| code-fold: true
  
-tidy(model, conf.int = TRUE) |>
+tidy(model_lr, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(term = reorder(term, estimate)) |>
   ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
@@ -670,13 +670,36 @@ tidy(model, conf.int = TRUE) |>
   )
 ```
 
-#### Interpretation
-
 The cities are exempt from this regression as the number of distinct variables would be too large for the model. Therefore for location only states will be used.
 
 Locations like US insular areas like Hawaii and the Virgin Islands appear to be the greatest contributors to price, California being third.
 
 Regarding the numeric variables the number of baths increases housing price the most with around 384.000\$ per bath room. Every square meter of the house size adds 16.7\$ to the price, each acre of the lot around 14.2\$. Interestingly each additional bed appears to decrease the price by around 81.946\$. At this point it has to be noted, that these price changes assume that for each variable all other variables would be constant.
+
+### Interpretation of Linear Regression
+
+```{r}
+# Vorhersagen auf Testdaten
+lm_preds <- predict(model_lr, newdata = test_data)
+
+# Kennwerte berechnen
+lm_metrics <- tibble(
+  RMSE = sqrt(mean((test_data$price - lm_preds)^2)),
+  MAE  = mean(abs(test_data$price - lm_preds)),
+  R2   = 1 - sum((test_data$price - lm_preds)^2) /
+              sum((test_data$price - mean(test_data$price))^2)
+)
+
+lm_metrics
+```
+The linear regression model shows limited predictive performance.
+
+An RMSE of 1,018,695 indicates large average prediction errors, reflecting the model’s inability to capture complex patterns in housing prices.
+The MAE of 329,149 suggests that, on average, predictions deviate by roughly 329k from the true prices.
+
+An R² of 0.204 means that the model explains only 20.4% of the variance in prices, indicating that the assumed linear relationships between the predictors and the target variable are insufficient to describe the underlying structure of the data.
+
+Overall, the linear regression serves as a baseline model with high interpretability but substantially lower explanatory and predictive power compared to the Random Forest model.
 
 ### Hyperparameter for Random Forest
 
