@@ -756,7 +756,8 @@ rf_model <- ranger(
   formula = price ~ house_size + bed + bath + acre_lot + state + status,
   data = train_data,
   importance = "impurity",
-  num.trees = 100
+  num.trees = 300,
+  mtry = 2
 )
 
 importance_df <- enframe(rf_model$variable.importance, name = "Variable", value = "Importance") %>%
@@ -773,6 +774,29 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance, fil
   )
 
 ```
+
+### Interpretation of Random Forest Model
+
+```{r}
+# Vorhersagen auf Testdaten
+rf_preds <- predict(rf_model, data = test_data)$predictions
+
+# Kennwerte berechnen
+rf_metrics <- tibble(
+  RMSE = sqrt(mean((test_data$price - rf_preds)^2)),
+  MAE  = mean(abs(test_data$price - rf_preds)),
+  R2   = 1 - sum((test_data$price - rf_preds)^2) /
+              sum((test_data$price - mean(test_data$price))^2)
+)
+
+rf_metrics
+```
+
+The Random Forest model achieves an **RMSE of 842,861**, indicating a relatively large average prediction error, which is expected given the high variance and scale of housing prices.
+
+The **MAE of 224,475** shows that, on average, predictions deviate from the true prices by approximately **224k**, making it a more robust indicator of typical error magnitude than RMSE.
+
+An **R² of 0.455** means that the model explains about 45.5% of the variance in housing prices, indicating moderate explanatory power and suggesting that while the model captures important patterns, a substantial portion of price variability remains unexplained.
 
 ### Hyperparameter for Neural Network
 
