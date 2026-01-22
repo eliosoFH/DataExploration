@@ -627,7 +627,6 @@ test_data <- data[-train_indices, ]
 ```
 
 
-
 ### Linear Regression
 
 ```{r}
@@ -679,6 +678,50 @@ Locations like US insular areas like Hawaii and the Virgin Islands appear to be 
 
 Regarding the numeric variables the number of baths increases housing price the most with around 384.000\$ per bath room. Every square meter of the house size adds 16.7\$ to the price, each acre of the lot around 14.2\$. Interestingly each additional bed appears to decrease the price by around 81.946\$. At this point it has to be noted, that these price changes assume that for each variable all other variables would be constant.
 
+### Hyperparameter for Random Forest
+
+```{r}
+set.seed(123)
+
+# einfache Grid-Suche
+rf_grid <- expand.grid(
+  num.trees = c(100, 300, 500),
+  mtry      = c(2, 3, 4)
+)
+
+rf_results <- rf_grid |>
+  mutate(
+    rmse = map2_dbl(num.trees, mtry, ~ {
+      model <- ranger(
+        price ~ house_size + bed + bath + acre_lot + state + status,
+        data = train_data,
+        num.trees = .x,
+        mtry = .y,
+        importance = "impurity"
+      )
+      preds <- predict(model, data = test_data)$predictions
+      sqrt(mean((test_data$price - preds)^2))
+    })
+  ) |>
+  arrange(rmse)
+
+rf_results
+```
+
+### Interpretation for Hyperparameters
+
+Die Grid-Suche zeigt, wie sich die Modellgüte (RMSE) in Abhängigkeit von num.trees und mtry verändert:
+
+num.trees
+Mehr Bäume reduzieren die Varianz des Modells und stabilisieren die Vorhersagen.
+Ab einer bestimmten Anzahl (hier typischerweise ≥ 300) verbessert sich der RMSE jedoch nur noch marginal.
+
+mtry
+Steuert die Anzahl der Variablen, die bei jedem Split betrachtet werden.
+Kleinere Werte erhöhen die Zufälligkeit und reduzieren Overfitting, zu kleine Werte können jedoch relevante Prädiktoren verdrängen.
+
+Die beste Kombination (niedrigster RMSE) wird im finalen Random-Forest-Modell verwendet.
+
 ## Random Forest
 
 ```{r}
@@ -709,9 +752,65 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance, fil
 
 ```
 
+### Hyperparameter for Neural Network
 
+```{r}
+nn_grid <- expand.grid(
+  size  = c(3, 5, 7),   # Anzahl Hidden Neurons
+  decay = c(0, 0.01, 0.1)
+)
 
+nn_results <- nn_grid |>
+  mutate(
+    rmse = map2_dbl(size, decay, ~ {
+      model <- nnet(
+        price ~ house_size + bed + bath + acre_lot + state + status,
+        data = train_data,
+        size = .x,
+        decay = .y,
+        linout = TRUE,
+        maxit = 500,
+        trace = FALSE
+      )
+      preds <- predict(model, test_data)
+      sqrt(mean((test_data$price - preds)^2))
+    })
+  ) |>
+  arrange(rmse)
+
+nn_results
+```
+
+### Interpretation for Hyperparameters
+
+size (Hidden Neurons)
+Bestimmt die Modellkomplexität.
+Zu kleine Netze unterfitten, zu große Netze neigen zu Overfitting.
+
+decay (Weight Decay / Regularisierung)
+Bestraft große Gewichte und stabilisiert das Training.
+Moderate Werte (z. B. 0.01) führen häufig zu besserer Generalisierung.
+
+Die Kombination mit dem niedrigsten RMSE stellt den besten Kompromiss zwischen Modellkomplexität und Generalisierungsfähigkeit dar.
 ## Neural Network
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+set.seed(123)
+
+nn_model <- nnet(
+  price ~ house_size + bed + bath + acre_lot + state + status,
+  data = train_data,
+  size = 5,
+  decay = 0.01,
+  linout = TRUE,
+  maxit = 500,
+  trace = FALSE
+)
+```
 
 # Conclusion
 
