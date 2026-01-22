@@ -68,6 +68,7 @@ Our goal is to gain a deeper understanding of the current U.S. housing market by
 #| code-summary: Libraries
 #| code-fold: true
 library <- function(...) {suppressPackageStartupMessages(base::library(...))}
+library(ranger)
 library(tidyverse)
 library(dplyr)
 library(knitr)
@@ -82,6 +83,7 @@ library(DT)
 library(kableExtra)
 library(broom)
 library(plotly)
+
 ```
 
 # Data
@@ -385,7 +387,7 @@ ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
     panel.spacing.y = unit(1, "lines"),
     strip.text = element_text(size = 12, face = "bold"),
     axis.text.y = element_text(size = 8),
-    plot.margin = margin(5, 15, 5, 5)
+    plot.margin = ggplot2::margin(5, 15, 5, 5)
   )
 ```
 
@@ -474,56 +476,7 @@ plot_ly(
 
 **Outliers**: A few extremely large or expensive properties stretch the scale upward.
 
-### Multiple Regression
 
-```{r}
-#| code-fold: true
-
-model <- lm(price ~ house_size + bath + bed + state + status, data = data)
-tidy(model) |>
-  arrange(p.value) |>
-  mutate(
-    estimate = round(estimate, 1),
-    std.error = round(std.error, 1),
-    statistic = round(statistic, 1),
-    p.value = signif(p.value, 3)
-  ) |>
-  datatable(
-    caption = "Regressionsergebnisse (interaktiv)",
-    filter = "top",         
-    options = list(
-      pageLength = 10,      
-      autoWidth = TRUE,
-      responsive = TRUE
-    )
-  )
-```
-
-```{r}
-#| label: "Graphic Regression"
-#| code-fold: true
- 
-tidy(model, conf.int = TRUE) |>
-  filter(term != "(Intercept)") |>
-  mutate(term = reorder(term, estimate)) |>
-  ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
-  geom_col(show.legend = FALSE) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  theme_minimal() +
-  labs(
-    title = "Greatest contributors to price",
-    x = "regression coefficient",
-    y = ""
-  )
-```
-
-#### Interpretation
-
-The cities are exempt from this regression as the number of distinct variables would be too large for the model. Therefore for location only states will be used.
-
-Locations like US insular areas like Hawaii and the Virgin Islands appear to be the greatest contributors to price, California being third.
-
-Regarding the numeric variables the number of baths increases housing price the most with around 384.000\$ per bath room. Every square meter of the house size adds 16.7\$ to the price, each acre of the lot around 14.2\$. Interestingly each additional bed appears to decrease the price by around 81.946\$. At this point it has to be noted, that these price changes assume that for each variable all other variables would be constant.
 
 ### Average Property Price Map
 
@@ -658,12 +611,107 @@ plot_ly(
 
 **Lower ranges**: Most central and midwestern states have smaller price gaps, indicating more uniform housing markets.
 
-# Summary
+# Data Engineering
 
-The analysis of the U.S. real estate market reveals strong regional and structural disparities in both prices and property characteristics. Home prices and lot sizes show a pronounced right-skewed distribution, with a few luxury properties driving up the averages. The mean price is around **\$573,000**, while the median of **\$379,000** highlights significant inequality across listings.
+Split the data into trainings data and test data
 
-Coastal and metropolitan states—especially **California, New York, and Washington**—record the highest average prices, often exceeding one million dollars, whereas **Midwestern and Southern states** remain far more affordable. Average home sizes range between **2,000 and 2,500 square feet**, with larger houses common in spacious states like **Utah and Colorado**, and smaller ones in denser areas such as **New York and California**.
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
 
-Although price generally increases with house size, the effect weakens for very large properties, and prices vary widely due to **location and amenities**. Roughly **55% of properties were listed for sale**, with asking prices well above actual sale prices—suggesting **overvaluation or negotiation margins**.
+set.seed(123)
+train_indices <- sample(1:nrow(data), size = 0.7 * nrow(data))
+train_data <- data[train_indices, ]
+test_data <- data[-train_indices, ]
+```
 
-In summary, the U.S. housing market is **highly regionalized** and shaped by **luxury outliers**. While property size and features matter, **location remains the key driver of value**, reflecting broader **economic and demographic differences** between coastal and inland markets.
+
+
+### Linear Regression
+
+```{r}
+#| code-fold: true
+
+model <- lm(price ~ house_size + bath + bed + state + status, data = train_data)
+tidy(model) |>
+  arrange(p.value) |>
+  mutate(
+    estimate = round(estimate, 1),
+    std.error = round(std.error, 1),
+    statistic = round(statistic, 1),
+    p.value = signif(p.value, 3)
+  ) |>
+  datatable(
+    caption = "Regressionsergebnisse (interaktiv)",
+    filter = "top",         
+    options = list(
+      pageLength = 10,      
+      autoWidth = TRUE,
+      responsive = TRUE
+    )
+  )
+```
+
+```{r}
+#| label: "Graphic Regression"
+#| code-fold: true
+ 
+tidy(model, conf.int = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(term = reorder(term, estimate)) |>
+  ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
+  geom_col(show.legend = FALSE) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(
+    title = "Greatest contributors to price",
+    x = "regression coefficient",
+    y = ""
+  )
+```
+
+#### Interpretation
+
+The cities are exempt from this regression as the number of distinct variables would be too large for the model. Therefore for location only states will be used.
+
+Locations like US insular areas like Hawaii and the Virgin Islands appear to be the greatest contributors to price, California being third.
+
+Regarding the numeric variables the number of baths increases housing price the most with around 384.000\$ per bath room. Every square meter of the house size adds 16.7\$ to the price, each acre of the lot around 14.2\$. Interestingly each additional bed appears to decrease the price by around 81.946\$. At this point it has to be noted, that these price changes assume that for each variable all other variables would be constant.
+
+## Random Forest
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+set.seed(123)
+rf_model <- ranger(
+  formula = price ~ house_size + bed + bath + acre_lot + state + status,
+  data = train_data,
+  importance = "impurity",
+  num.trees = 100
+)
+
+importance_df <- enframe(rf_model$variable.importance, name = "Variable", value = "Importance") %>%
+  arrange(desc(Importance))
+
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance, fill = Importance)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Variable Importance from Random Forest Model",
+    x = "Variable",
+    y = "Importance"
+  )
+
+```
+
+
+
+## Neural Network
+
+# Conclusion
+
