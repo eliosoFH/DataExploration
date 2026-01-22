@@ -681,6 +681,7 @@ Regarding the numeric variables the number of baths increases housing price the 
 ### Hyperparameter for Random Forest
 
 ```{r}
+"""
 set.seed(123)
 
 # einfache Grid-Suche
@@ -706,21 +707,42 @@ rf_results <- rf_grid |>
   arrange(rmse)
 
 rf_results
+"""
 ```
 
 ### Interpretation for Hyperparameters
 
-Die Grid-Suche zeigt, wie sich die Modellgüte (RMSE) in Abhängigkeit von num.trees und mtry verändert:
+Before interpreting the results, it is useful to briefly clarify the meaning of the two Random Forest hyperparameters:
 
-num.trees
-Mehr Bäume reduzieren die Varianz des Modells und stabilisieren die Vorhersagen.
-Ab einer bestimmten Anzahl (hier typischerweise ≥ 300) verbessert sich der RMSE jedoch nur noch marginal.
+**num.trees**
+Specifies the number of decision trees grown in the forest.
+Increasing num.trees generally reduces variance and stabilizes predictions, but beyond a certain point the performance gains become marginal while computational cost increases.
 
-mtry
-Steuert die Anzahl der Variablen, die bei jedem Split betrachtet werden.
-Kleinere Werte erhöhen die Zufälligkeit und reduzieren Overfitting, zu kleine Werte können jedoch relevante Prädiktoren verdrängen.
+**mtry**
+Defines the number of predictor variables randomly selected as candidates at each split.
+Smaller values increase randomness and tree diversity, which can reduce overfitting, whereas larger values make individual trees more similar and may increase variance.
 
-Die beste Kombination (niedrigster RMSE) wird im finalen Random-Forest-Modell verwendet.
+  num.trees mtry     rmse
+1       300    2 838263.1
+2       500    2 839089.1
+3       100    2 846528.8
+4       500    3 860607.9
+5       100    3 863708.7
+6       300    3 867879.5
+7       100    4 889648.8
+8       300    4 896180.3
+9       500    4 902455.2
+
+The grid search results show clear performance differences across combinations of num.trees and mtry:
+
+The best-performing configuration is
+**num.trees = 300** and **mtry = 2**, achieving the lowest **RMSE (838,263.1).**
+
+Increasing the number of trees from 300 to 500 with the same mtry = 2 does not improve performance (RMSE slightly increases to 839,089.1), indicating diminishing returns from adding more trees.
+
+Using only 100 trees leads to a noticeably higher RMSE (846,528.8), suggesting that the forest is not yet sufficiently stable.
+
+Higher values of mtry (3 or 4) consistently result in worse RMSE, regardless of the number of trees. This indicates that allowing too many variables at each split reduces tree diversity and increases overfitting.
 
 ## Random Forest
 
@@ -755,6 +777,7 @@ ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance, fil
 ### Hyperparameter for Neural Network
 
 ```{r}
+
 nn_grid <- expand.grid(
   size  = c(3, 5, 7),   # Anzahl Hidden Neurons
   decay = c(0, 0.01, 0.1)
@@ -783,15 +806,7 @@ nn_results
 
 ### Interpretation for Hyperparameters
 
-size (Hidden Neurons)
-Bestimmt die Modellkomplexität.
-Zu kleine Netze unterfitten, zu große Netze neigen zu Overfitting.
 
-decay (Weight Decay / Regularisierung)
-Bestraft große Gewichte und stabilisiert das Training.
-Moderate Werte (z. B. 0.01) führen häufig zu besserer Generalisierung.
-
-Die Kombination mit dem niedrigsten RMSE stellt den besten Kompromiss zwischen Modellkomplexität und Generalisierungsfähigkeit dar.
 ## Neural Network
 
 ```{r}
