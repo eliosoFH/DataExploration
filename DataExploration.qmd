@@ -83,6 +83,8 @@ library(DT)
 library(kableExtra)
 library(broom)
 library(plotly)
+library(nnet)
+
 
 ```
 
@@ -733,7 +735,7 @@ rf_results
 """
 ```
 
-### Interpretation for Hyperparameters
+### Interpretation for Hyperparameters of Random Forest
 
 Before interpreting the results, it is useful to briefly clarify the meaning of the two Random Forest hyperparameters:
 
@@ -824,7 +826,7 @@ An **R² of 0.455** means that the model explains about 45.5% of the variance in
 ### Hyperparameter for Neural Network
 
 ```{r}
-
+"""
 nn_grid <- expand.grid(
   size  = c(3, 5, 7),   # Anzahl Hidden Neurons
   decay = c(0, 0.01, 0.1)
@@ -849,10 +851,35 @@ nn_results <- nn_grid |>
   arrange(rmse)
 
 nn_results
+"""
 ```
 
 ### Interpretation for Hyperparameters
 
+Before interpreting the results, it is useful to briefly clarify the meaning of the two neural network hyperparameters:
+
+**size**
+Specifies the number of neurons in the hidden layer.
+A larger size increases the model’s capacity to learn complex, non-linear relationships, but also raises the risk of overfitting and increases computational complexity.
+
+**decay**
+Controls the strength of weight decay (L2 regularization).
+Higher values of decay penalize large weights more strongly, which can improve generalization by reducing overfitting, while a value of zero corresponds to no regularization.
+
+  size decay    rmse
+1    7  0.10 1100793
+2    7  0.00 1141877
+3    7  0.01 1141878
+4    3  0.00 1141878
+5    5  0.01 1141878
+6    3  0.10 1141878
+7    3  0.01 1141878
+8    5  0.00 1141878
+9    5  0.10 1141878
+
+The grid search results indicate limited sensitivity of model performance to most combinations of size and decay, with one notable exception.
+The best-performing configuration is **size = 7** and **decay = 0.10**, achieving the **lowest RMSE (1,100,793)**.
+This suggests that a larger hidden layer combined with relatively strong regularization allows the neural network to capture more complex relationships in the data while mitigating overfitting.
 
 ## Neural Network
 
@@ -866,13 +893,18 @@ set.seed(123)
 nn_model <- nnet(
   price ~ house_size + bed + bath + acre_lot + state + status,
   data = train_data,
-  size = 5,
-  decay = 0.01,
+  size = 7,
+  decay = 0.10,
   linout = TRUE,
   maxit = 500,
   trace = FALSE
 )
 ```
+
+
+## Comparision of the Models
+
+
 
 # Conclusion
 
