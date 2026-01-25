@@ -1,5 +1,5 @@
 ---
-title: "Data Exploration Gabriel Hamulic"
+title: "Machine Learning Models Gabriel Hamulic"
 subtitle: "Dataset: US Real Estate Dataset"
 author: "Hamulic, Gabriel"
 date: today
@@ -34,33 +34,13 @@ execute:
 \listoftables
 \listoflistings
 
-::: callout-caution
-### Instructions
-
-Your report must be of high quality, meaning that your report:
-
--   is visually and textually pleasing of
--   does not look/read/feel like a draft instead of a finished analysis
--   explains/discusses your findings and results in the main text, e.g., explain/discuss all figures/table in the main text
--   is representable such that it can show to any interested third party
--   uses figure/table captions/linking/reference (see example further down)
--   Do not show any standard printout of R-code, use for data.frame/tibbles `knitr::kable()` printing.
--   Do not simply print datasets (too many lines) use instead `rmarkdown::paged_table()`
-:::
-
 {{< pagebreak >}}
 
 # Introduction
 
-In this project, we explore a large dataset of over 2 million real estate listings across the United States. The data includes key property attributes such as price, size, lot area, location, and listing status.
+This project applies and compares several machine learning methods to predict residential property prices. Using a structured housing dataset, the full data science pipeline is implemented, including data preparation, feature engineering, exploratory analysis, and regression modeling. Multiple models — including tree-based approaches and a neural network — are trained and tuned, and their predictive performance is evaluated on a separate test set using metrics such as RMSE, MAE, and R².
 
-Our goal is to gain a deeper understanding of the current U.S. housing market by identifying:
-
--   Patterns in property prices and sizes across states and cities
-
--   Relationships between housing characteristics (e.g., size, bedrooms, bathrooms)
-
--   Regional differences in affordability and market activity
+In addition to performance comparison, the project also focuses on model interpretation to understand which features most influence price predictions. The results are summarized in a compact dashboard, providing an overview of model accuracy and key insights. Overall, the project demonstrates how different machine learning techniques can be systematically evaluated in a real-world regression task.
 
 ## Libraries
 
@@ -694,19 +674,12 @@ lm_metrics <- tibble(
 
 lm_metrics
 ```
-The linear regression model shows limited predictive performance.
 
-An RMSE of 1,018,695 indicates large average prediction errors, reflecting the model’s inability to capture complex patterns in housing prices.
-The MAE of 329,149 suggests that, on average, predictions deviate by roughly 329k from the true prices.
-
-An R² of 0.204 means that the model explains only 20.4% of the variance in prices, indicating that the assumed linear relationships between the predictors and the target variable are insufficient to describe the underlying structure of the data.
-
-Overall, the linear regression serves as a baseline model with high interpretability but substantially lower explanatory and predictive power compared to the Random Forest model.
+The linear regression model achieves a test RMSE of approximately 1,018,695, which is higher than the Random Forest but lower than the neural network. This indicates that while the model captures some systematic relationship between predictors and price, its linear structure cannot fully model the complexity of the housing market. The result suggests moderate predictive ability but clear underfitting compared to more flexible models.
 
 ### Hyperparameter for Random Forest
 
-```{r}
-"""
+```{verbatim}
 set.seed(123)
 
 # einfache Grid-Suche
@@ -732,7 +705,6 @@ rf_results <- rf_grid |>
   arrange(rmse)
 
 rf_results
-"""
 ```
 
 ### Interpretation for Hyperparameters of Random Forest
@@ -817,16 +789,11 @@ rf_metrics <- tibble(
 rf_metrics
 ```
 
-The Random Forest model achieves an **RMSE of 842,861**, indicating a relatively large average prediction error, which is expected given the high variance and scale of housing prices.
-
-The **MAE of 224,475** shows that, on average, predictions deviate from the true prices by approximately **224k**, making it a more robust indicator of typical error magnitude than RMSE.
-
-An **R² of 0.455** means that the model explains about 45.5% of the variance in housing prices, indicating moderate explanatory power and suggesting that while the model captures important patterns, a substantial portion of price variability remains unexplained.
+The Random Forest shows the best performance with a test RMSE of about 842,861, which is a substantial improvement over both linear regression and the neural network. This reduction in error indicates that modeling non-linearities and interactions between variables significantly improves predictions. The model therefore captures the structure of the data more effectively than the other approaches.
 
 ### Hyperparameter for Neural Network
 
-```{r}
-"""
+```{verbatim}
 nn_grid <- expand.grid(
   size  = c(3, 5, 7),   # Anzahl Hidden Neurons
   decay = c(0, 0.01, 0.1)
@@ -851,7 +818,6 @@ nn_results <- nn_grid |>
   arrange(rmse)
 
 nn_results
-"""
 ```
 
 ### Interpretation for Hyperparameters
@@ -890,21 +856,77 @@ This suggests that a larger hidden layer combined with relatively strong regular
 
 set.seed(123)
 
-nn_model <- nnet(
+# Fit
+nn_model <- nnet::nnet(
   price ~ house_size + bed + bath + acre_lot + state + status,
-  data = train_data,
-  size = 7,
-  decay = 0.10,
+  data   = train_data,
+  size   = 7,
+  decay  = 0.10,
   linout = TRUE,
-  maxit = 500,
-  trace = FALSE
+  maxit  = 500,
+  trace  = FALSE
+)
+
+# Predict on test set
+nn_preds <- predict(nn_model, newdata = test_data, type = "raw")
+
+# Metrics
+nn_rmse <- sqrt(mean((test_data$price - nn_preds)^2, na.rm = TRUE))
+nn_mae  <- mean(abs(test_data$price - nn_preds), na.rm = TRUE)
+nn_r2   <- 1 - sum((test_data$price - nn_preds)^2, na.rm = TRUE) /
+  sum((test_data$price - mean(test_data$price, na.rm = TRUE))^2, na.rm = TRUE)
+
+tibble::tibble(
+  model = "nnet",
+  rmse  = nn_rmse,
+  mae   = nn_mae,
+  r2    = nn_r2
 )
 ```
 
+The best tuned neural network configuration (size = 7, decay = 0.10) achieves a test RMSE of roughly 1,100,793, which is the highest error among the three models. Despite its theoretical flexibility, the neural network does not generalize as well in this tabular dataset. This suggests that, in this case, increased model complexity does not automatically translate into better performance.
+
+### Interpretation of Neural Network
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+# Quick interpretation helpers
+
+# 1) Observed vs Predicted (scatter)
+plot(test_data$price, nn_preds,
+     xlab = "Observed price", ylab = "Predicted price")
+abline(0, 1)
+
+# 2) Permutation importance (simple + model-agnostic)
+perm_rmse <- function(df, var) {
+  df_perm <- df
+  df_perm[[var]] <- sample(df_perm[[var]])
+  p <- predict(nn_model, newdata = df_perm, type = "raw")
+  sqrt(mean((test_data$price - p)^2, na.rm = TRUE))
+}
+
+vars <- c("house_size","bed","bath","acre_lot","state","status")
+base_rmse <- nn_rmse
+
+nn_perm_imp <- purrr::map_dbl(vars, ~ perm_rmse(test_data, .x) - base_rmse) |>
+  tibble::tibble(variable = vars, rmse_increase = _) |>
+  dplyr::arrange(dplyr::desc(rmse_increase))
+
+nn_perm_imp
+
+```
+
+The observed vs. predicted plot reveals that the neural network produces nearly constant predictions across the entire price range. This indicates that the model failed to learn meaningful relationships and effectively underfits the data. The most likely reason is the lack of feature scaling combined with strong regularization, which prevents the network from adjusting its weights appropriately. As a result, the neural network defaults to predicting values close to the overall mean price.
 
 ## Comparision of the Models
 
-
+In terms of RMSE, the ranking is:
+Random Forest (≈ 842k) < Linear Regression (≈ 1,019k) < Neural Network (≈ 1,101k).
+The Random Forest reduces prediction error by roughly 17% compared to linear regression and by about 24% compared to the neural network, showing a clear performance advantage.
 
 # Conclusion
 
+The results show that model flexibility matters, but the type of flexibility is crucial. Tree-based ensemble methods like Random Forest handle structured, interaction-heavy data best, leading to the lowest prediction error. Linear regression serves as a reasonable baseline, while the neural network does not provide benefits in this setting.
