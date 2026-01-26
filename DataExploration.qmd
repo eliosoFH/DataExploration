@@ -851,6 +851,159 @@ This suggests that a larger hidden layer combined with relatively strong regular
 
 ```{r}
 #| code-fold: true
+target   <- "price"
+
+num_vars <- c("house_size", "bed", "bath", "acre_lot")
+cat_vars <- c("state", "status")
+```
+
+Defines the target and the predictor groups used throughout the NN pipeline. Keeping them in one place makes the feature set easy to change.
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+library(rsample)
+
+set.seed(123)
+
+data_model <- data[, c(target, num_vars, cat_vars)]
+
+split1 <- initial_split(data_model, prop = 0.7)
+train_data <- training(split1)
+temp_data  <- testing(split1)
+
+split2 <- initial_split(temp_data, prop = 0.5)
+valid_data <- training(split2)
+test_data  <- testing(split2)
+```
+Splits the dataset into train (70%), validation (15%), and test (15%) sets with a fixed seed. Validation is used for tuning/model selection; test is reserved for the final evaluation.
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+library(recipes)
+
+# Optional: Zielvariable transformieren (empfohlen bei Preisen)
+use_log_target <- TRUE
+
+train_nn <- train_data
+valid_nn <- valid_data
+test_nn  <- test_data
+
+if (use_log_target) {
+  train_nn$y <- log1p(train_nn$price)
+  valid_nn$y <- log1p(valid_nn$price)
+  test_nn$y  <- log1p(test_nn$price)
+  outcome <- "y"
+} else {
+  outcome <- "price"
+}
+
+rec <- recipe(as.formula(paste0(outcome, " ~ ", paste(c(num_vars, cat_vars), collapse = " + "))),
+              data = train_nn) |>
+  step_novel(all_nominal_predictors()) |>               # neue Levels in Valid/Test
+  step_other(all_nominal_predictors(), threshold = 0.01) |> # seltene Levels -> "other" (anpassbar)
+  step_dummy(all_nominal_predictors(), one_hot = TRUE) |>
+  step_zv(all_predictors()) |>
+  step_normalize(all_numeric_predictors())              # z-Score Skalierung
+
+prep_rec <- prep(rec, training = train_nn, retain = TRUE)
+
+train_b <- bake(prep_rec, new_data = train_nn)
+valid_b <- bake(prep_rec, new_data = valid_nn)
+test_b  <- bake(prep_rec, new_data = test_nn)
+
+x_train <- as.matrix(subset(train_b, select = -all_of(outcome)))
+y_train <- train_b[[outcome]]
+
+x_valid <- as.matrix(subset(valid_b, select = -all_of(outcome)))
+y_valid <- valid_b[[outcome]]
+
+x_test  <- as.matrix(subset(test_b,  select = -all_of(outcome)))
+y_test  <- test_b[[outcome]]
+
+```
+
+Builds a preprocessing recipe for the neural network: optionally log-transforms the target (log1p(price)), handles unseen/rare factor levels, one-hot encodes categorical variables, removes zero-variance predictors, and standardizes numeric predictors (z-scores). The recipe is fitted on the training set and applied to train/validation/test to create x_* matrices and y_* vectors.
+
+```{r}
+#| code-fold: true
+#| warning: false
+#| message: false
+
+library(nnet)
+library(tibble)
+
+rmse <- function(truth, pred) sqrt(mean((truth - pred)^2, na.rm = TRUE))
+mae  <- function(truth, pred) mean(abs(truth - pred), na.rm = TRUE)
+r2   <- function(truth, pred) {
+  ss_res <- sum((truth - pred)^2, na.rm = TRUE)
+  ss_tot <- sum((truth - mean(truth, na.rm = TRUE))^2, na.rm = TRUE)
+  1 - ss_res / ss_tot
+}
+
+set.seed(123)
+
+nn_model <- nnet(
+  x = x_train,
+  y = y_train,
+  size   = 7,
+  decay  = 0.10,
+  linout = TRUE,
+  maxit  = 500,
+  trace  = FALSE,
+  MaxNWts = 20000
+)
+
+pred_valid_trf <- as.numeric(predict(nn_model, x_valid))
+
+# Zurück in Original-Skala, falls log1p genutzt wurde
+if (use_log_target) {
+  pred_valid <- expm1(pred_valid_trf)
+  truth_valid <- valid_data$price
+} else {
+  pred_valid <- pred_valid_trf
+  truth_valid <- y_valid
+}
+
+tibble(
+  set  = "valid",
+  RMSE = rmse(truth_valid, pred_valid),
+  MAE  = mae(truth_valid, pred_valid),
+  R2   = r2(truth_valid, pred_valid)
+)
+```
+
+Trains an nnet regression model with size = 7 and decay = 0.10, then predicts on the validation set. If a log target is used, predictions are back-transformed with expm1(). Outputs RMSE, MAE, and R² on the original price scale.
+
+```{r}
+#| code-fold: true
+pred_test_trf <- as.numeric(predict(nn_model, x_test))
+
+if (use_log_target) {
+  pred_test <- expm1(pred_test_trf)
+  truth_test <- test_data$price
+} else {
+  pred_test <- pred_test_trf
+  truth_test <- y_test
+}
+
+tibble(
+  set  = "test",
+  RMSE = rmse(truth_test, pred_test),
+  MAE  = mae(truth_test, pred_test),
+  R2   = r2(truth_test, pred_test)
+)
+```
+
+Generates test predictions (with the same back-transformation to the original scale) and reports final generalization performance on the held-out test set: RMSE = 817,135, MAE = 221,255, R² = 0.423.
+
+```{r}
+#| code-fold: true
 #| warning: false
 #| message: false
 
