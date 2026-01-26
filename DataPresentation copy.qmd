@@ -1,0 +1,335 @@
+---
+title: "US Real Estate Market Presentation"
+date: today
+author: 
+  - Emir Hamulic
+  - Elias Gabriel
+self-contained: true
+code-link: true
+code-tools: true
+lightbox: true  ## click on image to open in lightbox
+format: 
+  revealjs:
+    scrollable: true
+    smaller: true
+    theme: sky ##https://quarto.org/docs/presentations/revealjs/themes.html
+---
+
+```{r}
+#| code-summary: Libraries
+library <- function(...) {suppressPackageStartupMessages(base::library(...))}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(rmarkdown)
+library(janitor)
+library(scales)
+library(tidytext)
+library(ggforce)
+library(GGally)
+library(DT)
+library(kableExtra)
+library(broom)
+library(plotly)
+```
+
+```{r}
+data = read.csv("data/realtor-data.zip.csv") # Data import
+data = subset(data, select = c(status, price, bed, bath, acre_lot, city, state, house_size)) # keep relevant columns
+data$status = as.factor(data$status)
+data$city = as.factor(data$city)
+data$state = as.factor(data$state)
+data <- na.omit(data)
+data = data |>
+  filter(price > 10000 & price < 1000000000)
+data = data |>
+  mutate(price_per_sqm = price/house_size)
+```
+
+## Basics
+- Dataset of 2.2M+ real estate listings across the United States (source: Kaggle, Ahmed Shahriar Sakib).
+- Includes key features: price, size, lot area, bedrooms, bathrooms, location, and status.
+- Goals:
+  - Understand price patterns and housing characteristics across states.
+  - Analyze relationships between property features and regional affordability trends.
+  - Provide insights into the current U.S. housing market dynamics.
+
+## Data structure
+```{r}
+#| label: "data_structure_after_transformation"
+#| tbl-cap: "Structure of cleaned dataset"
+#| code-fold: true
+
+structure_tbl <- tibble::tibble(
+  Variable = names(data),
+  Type = sapply(data, function(x) class(x)[1]),
+  Example = sapply(data, function(x) {
+    val <- unique(x[!is.na(x)])[1]
+    if (is.factor(val)) as.character(val) else as.character(round(val, 2))
+  }),
+  Missing = sapply(data, function(x) sum(is.na(x)))
+)
+
+kable(
+  structure_tbl,
+  caption = "Structure summary of the dataset",
+  align = c("l", "l", "l", "r")
+)
+```
+
+## Distribution of Numerical Variables
+
+```{r}
+#| label: "Logarithmic Visualisation"
+#| tbl-cap: "Visualisation of numerical variables in dataframe"
+#| code-fold: true
+data |>
+  clean_names() |>
+  pivot_longer(cols = where(is.numeric)) |>
+  ggplot(aes(x = value, fill = name)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "white") +
+  scale_x_log10(labels = label_comma()) +   # 👈 echte Werte, log-Skala
+  facet_wrap(~ name, scales = "free_x") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Numerical Variables (logarithmic scale)",
+    x = "Value",
+    y = "Count"
+  ) +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 25, hjust = 1) 
+    )
+```
+
+## Top Categories per Variable
+
+```{r}
+#| label: "Visualization Nominal Statistics"
+#| tbl-cap: "Top categories for factor variables with counts, proportions, and mean price"
+#| code-fold: true
+
+top_n_per_var <- 10 
+
+nominal_summary <- data |>
+  clean_names() |>
+  select(where(is.factor), price) |>
+  pivot_longer(cols = where(is.factor),
+               names_to = "Variable",
+               values_to = "Category") |>
+  group_by(Variable, Category) |>
+  summarise(
+    Count = n(),
+    Percent = round(100 * Count / nrow(data), 2),
+    Mean_Price = round(mean(price, na.rm = TRUE), 0),
+    .groups = "drop"
+  ) |>
+  group_by(Variable) |>
+  slice_max(order_by = Count, n = top_n_per_var, with_ties = FALSE) |>
+  ungroup()
+
+
+nominal_summary <- nominal_summary |>
+  group_by(Variable) |>
+  mutate(Category = forcats::fct_reorder(Category, Count),
+         Category = factor(Category, levels = unique(Category))) |>
+  ungroup()
+
+# Plot: Facets untereinander, mit eigener x-Skala und y-Skala pro Variable
+ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
+  geom_col(show.legend = FALSE, alpha = 0.8, width = 0.7) +
+  facet_wrap(~ Variable, ncol = 1, scales = "free", drop = TRUE) +
+  scale_x_continuous(labels = label_comma()) +   #Tausendertrennung, keine 1e+05
+  theme_minimal() +
+  labs(
+    title = "Top Categories per Factor Variable",
+    x = "Count",
+    y = "Category"
+  ) +
+  theme(
+    panel.spacing.y = unit(1, "lines"),
+    strip.text = element_text(size = 12, face = "bold"),
+    axis.text.y = element_text(size = 8),
+    plot.margin = margin(5, 15, 5, 5)
+  )
+```
+
+## Pairs Plot
+```{r}
+#| label: "Pairs Plot"
+#| code-fold: true
+
+set.seed(123)
+
+data_num <- data |>
+  janitor::clean_names() |>
+  select(where(is.numeric)) |>
+  slice_sample(n = 3000) |>
+  mutate(across(everything(), log1p)) 
+
+p <- ggpairs(
+  data_num,
+  progress = FALSE,
+  upper = list(continuous = wrap("cor", size = 4, alignPercent = 0.8, stars = TRUE)),
+  lower = list(continuous = wrap("points", alpha = 0.3, size = 0.7)),
+  diag = list(continuous = wrap("densityDiag", alpha = 0.7))
+)
+
+p +
+  theme_minimal(base_size = 11) +
+  theme(
+    strip.text = element_text(size = 8, face = "bold"),
+    panel.grid = element_blank(),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size = 9),
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
+  ) +
+  labs(title = "Pairs Plot (log-transformiert, n=3000)")
+```
+
+## Price vs House Size
+```{r}
+#| label: "scatter_price_size"
+#| tbl-cap: "Price vs. house size by listing status"
+#| code-fold: true
+
+# Stichprobe ziehen für Performance
+set.seed(123)
+sample_data <- data %>% sample_n(50000)
+
+plot_ly(
+  sample_data,
+  x = ~house_size,
+  y = ~price,
+  color = ~status,
+  type = "scatter",
+  mode = "markers",
+  alpha = 0.6
+) %>%
+  plotly::layout(
+    title = list(text = "Relationship Between House Size and Price by Status"),
+    xaxis = list(title = "House Size (sqft)"),
+    yaxis = list(title = "Price ($)", type = "log")
+  )
+```
+
+## Regression
+```{r}
+#| code-fold: true
+
+model <- lm(price ~ house_size + bath + bed + state + status, data = data)
+
+tidy(model, conf.int = TRUE) |>
+  filter(term != "(Intercept)") |>
+  mutate(term = reorder(term, estimate)) |>
+  ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
+  geom_col(show.legend = FALSE) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(
+    title = "Greatest contributors to price",
+    x = "regression coefficient",
+    y = ""
+  )
+```
+
+## Average Price Map
+
+```{r}
+#| label: "map_avg_price"
+#| tbl-cap: "Average property price by U.S. state"
+#| code-fold: true
+
+valid_states <- tibble(
+  state_name = c(state.name, "District of Columbia"),
+  state_abbr = c(state.abb,  "DC")
+)
+
+map_price <- data |>
+  group_by(state) |>
+  summarise(avg_price = mean(price, na.rm = TRUE), .groups = "drop") |>
+  inner_join(valid_states, by = c("state" = "state_name")) |>
+  mutate(avg_price_k = avg_price / 1000)
+
+plot_ly(
+  map_price,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~avg_price_k,
+  text = ~paste0(state, "<br>Avg Price: $", round(avg_price_k, 1), "K"),
+  colorscale = list(c(0, 1), c("lightblue", "darkblue")),
+  colorbar = list(title = "Avg Price ($K)")
+) |>
+  plotly::layout(
+    title = list(text = "Average Property Price by U.S. State"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+```
+
+## Average Size Map
+
+```{r}
+#| label: "map_avg_size"
+#| tbl-cap: "Average house size by U.S. state"
+#| code-fold: true
+
+map_size <- data %>%
+  group_by(state) %>%
+  summarise(avg_size = mean(house_size, na.rm = TRUE), .groups = "drop") %>%
+  inner_join(valid_states, by = c("state" = "state_name"))
+
+plot_ly(
+  map_size,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~avg_size,
+  text = ~paste0(state, "<br>Avg Size: ", round(avg_size), " sqft"),
+  colorscale = list(c(0, 1), c("lightgreen", "darkgreen")),
+  colorbar = list(title = "Avg Size (sqft)")
+) %>%
+  plotly::layout(
+    title = list(text = "Average House Size by U.S. State"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+```
+
+## Price Range Map
+```{r}
+#| label: "map_extreme_price"
+#| tbl-cap: "Price range (max − min) by U.S. state"
+#| code-fold: true
+
+map_extremes <- data |>
+  group_by(state) |>
+  summarise(
+    min_price = suppressWarnings(min(price, na.rm = TRUE)),
+    max_price = suppressWarnings(max(price, na.rm = TRUE)),
+    .groups = "drop"
+  ) |>
+  mutate(range_price = max_price - min_price) |>
+  inner_join(valid_states, by = c("state" = "state_name"))
+
+plot_ly(
+  map_extremes,
+  type = "choropleth",
+  locationmode = "USA-states",
+  locations = ~state_abbr,
+  z = ~range_price,
+  text = ~paste0(
+    state,
+    "<br>Min: $", formatC(min_price, big.mark = ",", format = "f", digits = 0),
+    "<br>Max: $", formatC(max_price, big.mark = ",", format = "f", digits = 0)
+  ),
+  colorscale = "Reds",
+  colorbar = list(title = "Price Range ($)")
+) |>
+  plotly::layout(
+    title = list(text = "Price Extrem Values by U.S. State (Max − Min)"),
+    geo = list(scope = "usa", projection = list(type = "albers usa"))
+  )
+```
+
+## Thank you for your attention

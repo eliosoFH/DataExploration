@@ -48,14 +48,17 @@ data = data |>
 ```
 
 ## Basics
-- Dataset of 2.2M+ real estate listings across the United States (source: Kaggle, Ahmed Shahriar Sakib).
-- Includes key features: price, size, lot area, bedrooms, bathrooms, location, and status.
-- Goals:
-  - Understand price patterns and housing characteristics across states.
-  - Analyze relationships between property features and regional affordability trends.
-  - Provide insights into the current U.S. housing market dynamics.
+
+-   Dataset of 2.2M+ real estate listings across the United States (source: Kaggle, Ahmed Shahriar Sakib).
+-   Includes key features: price, size, lot area, bedrooms, bathrooms, location, and status.
+-   Goals:
+    -   Understand price patterns and housing characteristics across states.
+    -   Analyze relationships between property features and regional affordability trends.
+    -   Provide insights into the current U.S. housing market dynamics.
+    -   Train and compare different Regression Models for price prediction
 
 ## Data structure
+
 ```{r}
 #| label: "data_structure_after_transformation"
 #| tbl-cap: "Structure of cleaned dataset"
@@ -155,181 +158,128 @@ ggplot(nominal_summary, aes(x = Count, y = Category, fill = Variable)) +
   )
 ```
 
-## Pairs Plot
-```{r}
-#| label: "Pairs Plot"
-#| code-fold: true
+## Data Split
+
+```{r setup-ml, include=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(broom)
+library(ranger)
 
 set.seed(123)
 
-data_num <- data |>
-  janitor::clean_names() |>
-  select(where(is.numeric)) |>
-  slice_sample(n = 3000) |>
-  mutate(across(everything(), log1p)) 
+# Train/test split
+train_indices <- sample(1:nrow(data), size = 0.7 * nrow(data))
+train_data <- data[train_indices, ]
+test_data  <- data[-train_indices, ]
 
-p <- ggpairs(
-  data_num,
-  progress = FALSE,
-  upper = list(continuous = wrap("cor", size = 4, alignPercent = 0.8, stars = TRUE)),
-  lower = list(continuous = wrap("points", alpha = 0.3, size = 0.7)),
-  diag = list(continuous = wrap("densityDiag", alpha = 0.7))
+# Linear Regression
+model_lr <- lm(price ~ house_size + bath + bed + state + status,
+               data = train_data)
+
+# Random Forest (best params)
+rf_model <- ranger(
+  price ~ house_size + bed + bath + acre_lot + state + status,
+  data = train_data,
+  num.trees = 300,
+  mtry = 2,
+  importance = "impurity"
 )
 
-p +
-  theme_minimal(base_size = 11) +
-  theme(
-    strip.text = element_text(size = 8, face = "bold"),
-    panel.grid = element_blank(),
-    axis.text = element_text(size = 8),
-    axis.title = element_text(size = 9),
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5)
-  ) +
-  labs(title = "Pairs Plot (log-transformiert, n=3000)")
+# Metrics
+lm_preds <- predict(model_lr, test_data)
+rf_preds <- predict(rf_model, data=test_data)$predictions
+
+rmse_lm <- sqrt(mean((test_data$price - lm_preds)^2))
+rmse_rf <- sqrt(mean((test_data$price - rf_preds)^2))
+
 ```
 
-## Price vs House Size
+-   Dataset split into training and test sets
+-   70 % Training / 30 % Test
+-   Same split used for all models
+-   Test data only used for final evaluation
+
+## Linear Regression
+
+-   Baseline regression model
+-   Location represented by state (cities excluded due to many levels)
+-   Strongest positive effects:
+    -   Bathrooms increase price the most
+    -   Larger house size increases price
+    -   Some states (e.g. Hawaii, California) strongly increase price
+-   Bedrooms show a negative effect when controlling for other variables
+-   Effects assume all other variables remain constant
+-   Test **RMSE ≈ 1,018,695** → underfitting
+
+## Linear Regression
+
 ```{r}
-#| label: "scatter_price_size"
-#| tbl-cap: "Price vs. house size by listing status"
-#| code-fold: true
-
-# Stichprobe ziehen für Performance
-set.seed(123)
-sample_data <- data %>% sample_n(50000)
-
-plot_ly(
-  sample_data,
-  x = ~house_size,
-  y = ~price,
-  color = ~status,
-  type = "scatter",
-  mode = "markers",
-  alpha = 0.6
-) %>%
-  plotly::layout(
-    title = list(text = "Relationship Between House Size and Price by Status"),
-    xaxis = list(title = "House Size (sqft)"),
-    yaxis = list(title = "Price ($)", type = "log")
-  )
-```
-
-## Regression
-```{r}
-#| code-fold: true
-
-model <- lm(price ~ house_size + bath + bed + state + status, data = data)
-
-tidy(model, conf.int = TRUE) |>
+tidy(model_lr, conf.int = TRUE) |>
   filter(term != "(Intercept)") |>
   mutate(term = reorder(term, estimate)) |>
   ggplot(aes(x = estimate, y = term, fill = estimate > 0)) +
   geom_col(show.legend = FALSE) +
   geom_vline(xintercept = 0, linetype = "dashed") +
-  theme_minimal() +
-  labs(
-    title = "Greatest contributors to price",
-    x = "regression coefficient",
-    y = ""
-  )
+  theme_minimal()
 ```
 
-## Average Price Map
+## Random Forest
+
+-   Hyperparameter tuning via grid search
+-   Best configuration:
+    -   **300 trees**
+    -   **mtry = 2**
+-   More trees gave no improvement
+-   Larger mtry reduced performance
+-   Feature importance highlights house size, location and bathrooms
+-   Test **RMSE ≈ 842,861** → major improvement over linear regression
+
+## Random Forest
 
 ```{r}
-#| label: "map_avg_price"
-#| tbl-cap: "Average property price by U.S. state"
-#| code-fold: true
+importance_df <- enframe(rf_model$variable.importance, 
+                         name = "Variable", value = "Importance") |>
+  arrange(desc(Importance))
 
-valid_states <- tibble(
-  state_name = c(state.name, "District of Columbia"),
-  state_abbr = c(state.abb,  "DC")
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_col() +
+  coord_flip() +
+  theme_minimal()
+```
+
+## Neural Network
+
+-   Requires preprocessing:
+    -   One-hot encoding
+    -   Scaling of numeric features
+    -   Handling rare and unseen categories
+-   Optional log transformation of target
+-   Grid search over hidden layer size and decay
+-   Best parameters:
+    -   **size = 7**
+    -   **decay = 0.10**
+
+## Neural Network
+
+-   Strong regularization improved generalization
+-   Test Performance:
+    -   **RMSE ≈ 817,135**
+    -   MAE ≈ 221,255
+    -   R² ≈ 0.423
+-   Most flexible model, but least interpretable
+
+## Model Comparison
+
+```{r}
+comparison <- tibble(
+  Model = c("Linear Regression", "Random Forest", "Neural Network"),
+  RMSE  = c(1018695, 842861, 817135)
 )
 
-map_price <- data |>
-  group_by(state) |>
-  summarise(avg_price = mean(price, na.rm = TRUE), .groups = "drop") |>
-  inner_join(valid_states, by = c("state" = "state_name")) |>
-  mutate(avg_price_k = avg_price / 1000)
-
-plot_ly(
-  map_price,
-  type = "choropleth",
-  locationmode = "USA-states",
-  locations = ~state_abbr,
-  z = ~avg_price_k,
-  text = ~paste0(state, "<br>Avg Price: $", round(avg_price_k, 1), "K"),
-  colorscale = list(c(0, 1), c("lightblue", "darkblue")),
-  colorbar = list(title = "Avg Price ($K)")
-) |>
-  plotly::layout(
-    title = list(text = "Average Property Price by U.S. State"),
-    geo = list(scope = "usa", projection = list(type = "albers usa"))
-  )
-```
-
-## Average Size Map
-
-```{r}
-#| label: "map_avg_size"
-#| tbl-cap: "Average house size by U.S. state"
-#| code-fold: true
-
-map_size <- data %>%
-  group_by(state) %>%
-  summarise(avg_size = mean(house_size, na.rm = TRUE), .groups = "drop") %>%
-  inner_join(valid_states, by = c("state" = "state_name"))
-
-plot_ly(
-  map_size,
-  type = "choropleth",
-  locationmode = "USA-states",
-  locations = ~state_abbr,
-  z = ~avg_size,
-  text = ~paste0(state, "<br>Avg Size: ", round(avg_size), " sqft"),
-  colorscale = list(c(0, 1), c("lightgreen", "darkgreen")),
-  colorbar = list(title = "Avg Size (sqft)")
-) %>%
-  plotly::layout(
-    title = list(text = "Average House Size by U.S. State"),
-    geo = list(scope = "usa", projection = list(type = "albers usa"))
-  )
-```
-
-## Price Range Map
-```{r}
-#| label: "map_extreme_price"
-#| tbl-cap: "Price range (max − min) by U.S. state"
-#| code-fold: true
-
-map_extremes <- data |>
-  group_by(state) |>
-  summarise(
-    min_price = suppressWarnings(min(price, na.rm = TRUE)),
-    max_price = suppressWarnings(max(price, na.rm = TRUE)),
-    .groups = "drop"
-  ) |>
-  mutate(range_price = max_price - min_price) |>
-  inner_join(valid_states, by = c("state" = "state_name"))
-
-plot_ly(
-  map_extremes,
-  type = "choropleth",
-  locationmode = "USA-states",
-  locations = ~state_abbr,
-  z = ~range_price,
-  text = ~paste0(
-    state,
-    "<br>Min: $", formatC(min_price, big.mark = ",", format = "f", digits = 0),
-    "<br>Max: $", formatC(max_price, big.mark = ",", format = "f", digits = 0)
-  ),
-  colorscale = "Reds",
-  colorbar = list(title = "Price Range ($)")
-) |>
-  plotly::layout(
-    title = list(text = "Price Extrem Values by U.S. State (Max − Min)"),
-    geo = list(scope = "usa", projection = list(type = "albers usa"))
-  )
+ggplot(comparison, aes(x = Model, y = RMSE)) +
+  geom_col() +
+  theme_minimal() +
+  labs(title = "Model Performance Comparison (Test RMSE)")
 ```
 
 ## Thank you for your attention
